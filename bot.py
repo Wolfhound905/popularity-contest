@@ -1,54 +1,72 @@
-from sqlite3.dbapi2 import OperationalError
+from os import environ
+
+import pymysql
 from dis_snek.client import Snake
-from dis_snek.models.application_commands import slash_command
+from dis_snek.models.application_commands import (
+    OptionTypes,
+    slash_command,
+    slash_option,
+    sub_command,
+)
+from dis_snek.models.context import InteractionContext
+from dis_snek.models.discord_objects.embed import Embed
 from dis_snek.models.listener import listen
 from dotenv import load_dotenv
-from os import environ
-import sqlite3
 
-bot = Snake(sync_interactions=True)
+from database import Database
+
 load_dotenv()
 
-# Setup
-con = sqlite3.connect("./stars.db")
-db = con.cursor() # Check is there are any table
-db.execute("SELECT name FROM sqlite_master WHERE type='table'")
-tables = list(map(lambda x: x[0], db.fetchall()))
-if ["stars", "configuration"] not in tables:  # Create the table
-    if "stars" not in tables:
-        db.execute("CREATE TABLE stars (message_id, author, stars)")
-    if "configuration" not in tables:
-        db.execute("CREATE TABLE configuration (server_id, channel, min_star_count)")
-    
+db = Database(
+    pymysql.connect(
+        host=environ["HOST"],
+        user=environ["USER"],
+        password=environ["PASSWORD"],
+        database=environ["DATABASE"],
+        charset="utf8mb4",
+        port=int(environ["PORT"]),
+        autocommit=True,
+    )
+)
+
+bot = Snake(sync_interactions=True, delete_unused_application_cmds=True)
+
 
 @listen()
 async def on_ready():
     print(f"Logged in as: {bot.user}")
 
 
+bot.guilds
+
+
+@slash_command("setup", "Setup the Starboard channel and minumum star count")
+@slash_option(
+    "channel", "The channel to starboard messages to", OptionTypes.CHANNEL, True
+)
+@slash_option(
+    "min_star_count",
+    "The minimum amount of stars to star a message",
+    OptionTypes.INTEGER,
+)
+async def setup(ctx: InteractionContext, channel, min_star_count: int = 4):
+    db.setup(ctx.guild.id, channel.id, min_star_count)
+    embed = Embed(
+        "⭐ Setup Complete!",
+        f"Posting to {channel.mention} with a minimun star count of {min_star_count}",
+        color="#F9AC42",
+    )
+    await ctx.send(embeds=[embed])
+
+
 @listen()
 async def on_message_update(event):
-    print(event)
+    print(event.emoji.name)
+
 
 @listen()
 async def on_message_reaction_add(event):
-    print(event.author)
+    print(event.emoji.name)
 
 
 bot.start(environ["TOKEN"])
-
-
-
-class DataBase:
-    class configure:
-        def set_channel(server_id:int, channel_id:int):
-            db.execute(f"INSERT INTO configuration (server_id, channel) VALUES ({server_id}, {channel_id});")
-            con.commit()
-            return
-        def set_min_stars(server_id:int, star_count:int):
-            db.execute(f"INSERT INTO configuration (server_id, min_star_count) VALUES ({server_id}, {star_count});")
-            con.commit()
-            return
-        
-    
-
