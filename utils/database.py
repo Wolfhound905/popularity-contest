@@ -16,11 +16,14 @@ class Database:
             (guild_id, channel_id, star_count),
         )
         return
-    def min_stars(self, guild_id:int) -> int:
+    def min_stars(self, guild_id:int) -> Union[int, None]:
         self.__db.execute(
             "SELECT min_star_count FROM configuration WHERE guild_id = %s;", (guild_id,)
         )
-        return int(self.__db.fetchone()["min_star_count"])
+        fetched = self.__db.fetchone()
+        if fetched is None:
+            return None
+        return int(fetched["min_star_count"])
 
     def get_star_channel(self, guild_id:int) -> Union[int, NoneType]:
         """ Gets the starboard channel ID """
@@ -50,6 +53,13 @@ class Database:
         """ Updates the star count """
         self.__db.execute(
             "UPDATE stars SET star_count = %s WHERE star_id = %s;", (star_count, star_id)
+        )
+        return
+
+    def remove_star(self, star_id:int) -> NoneType:
+        """ Removes a star from the starboard """
+        self.__db.execute(
+            "DELETE FROM stars WHERE star_id = %s;", (star_id,)
         )
         return
 

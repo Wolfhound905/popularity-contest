@@ -1,13 +1,10 @@
 from os import environ
 from dis_snek.errors import Forbidden
-from dis_snek.models import events
 from dis_snek.models.discord_objects.channel import (
     GuildPrivateThread,
     GuildPublicThread,
     GuildText,
-    ThreadChannel,
 )
-from dis_snek.models.discord_objects.message import Message, process_allowed_mentions
 
 import pymysql
 from dis_snek.client import Snake
@@ -16,7 +13,7 @@ from dis_snek.models.application_commands import (
     slash_command,
     slash_option,
 )
-from dis_snek.models.context import InteractionContext, MessageContext
+from dis_snek.models.context import InteractionContext
 from dis_snek.models.discord_objects.embed import Embed
 from dis_snek.models.listener import listen
 from dotenv import load_dotenv
@@ -56,7 +53,7 @@ async def on_ready():
     "The minimum amount of stars to star a message",
     OptionTypes.INTEGER,
 )
-async def setup(ctx: InteractionContext, channel, min_star_count: int = 4):
+async def setup(ctx: InteractionContext, channel, min_star_count:int = None):
     if type(channel) not in [GuildPrivateThread, GuildPublicThread, GuildText]:
         error = Embed(
             title="Error",
@@ -84,6 +81,9 @@ async def setup(ctx: InteractionContext, channel, min_star_count: int = 4):
         )
         await ctx.send(embeds=[error])
         return
+    min_stars = db.min_stars(ctx.guild.id)
+    if min_star_count is None and min_stars:
+        min_star_count = min_stars
 
     db.setup(ctx.guild.id, channel.id, min_star_count)
     embed = Embed(
@@ -97,6 +97,7 @@ async def setup(ctx: InteractionContext, channel, min_star_count: int = 4):
 @listen()
 async def on_message_reaction_remove(event):
     min_stars = db.min_stars(event.message.guild.id)
+    if min_stars is None: return
     msg = event.message
     for emoji in msg.reactions:
         if emoji.emoji["name"] == "⭐" and emoji.count >= min_stars:
@@ -106,16 +107,18 @@ async def on_message_reaction_remove(event):
                 await update_star_count(star, emoji.count)
 
         elif emoji.emoji["name"] == "⭐" and emoji.count < min_stars:
-            ...
-            # """Remove star"""
-            # star = db.check_existing(msg.id)
-            # if star:
-            #     db.remove_star(star.star_id)
-            #     star_channel = await bot.get_channel(
+            """Remove star"""
+            star = db.check_existing(msg.id)
+            if star:
+                db.remove_star(star.star_id)
+                star_channel = await bot.get_channel(db.get_star_channel(star.guild_id))
+                msg = await star_channel.get_message(star.star_id)
+                await msg.delete()
 
 @listen()
 async def on_message_reaction_add(event):
     min_stars = db.min_stars(event.message.guild.id)
+    if min_stars is None: return
     msg = event.message
     for emoji in msg.reactions:
         if emoji.emoji["name"] == "⭐" and emoji.count >= min_stars:
