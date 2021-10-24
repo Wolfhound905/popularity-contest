@@ -88,7 +88,7 @@ async def setup(ctx: InteractionContext, channel, min_star_count:int = None):
     db.setup(ctx.guild.id, channel.id, min_star_count)
     embed = Embed(
         "⭐ Setup Complete!",
-        f"Posting to {channel.mention} with a minimun star count of {min_star_count}",
+        f"Posting to {channel.mention} with a minimum star count of {min_star_count}",
         color="#F9AC42",
     )
     await ctx.send(embeds=[embed])
