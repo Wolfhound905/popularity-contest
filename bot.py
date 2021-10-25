@@ -1,27 +1,10 @@
-from os import environ
-from dis_snek.errors import Forbidden
-from dis_snek.models.discord_objects.channel import (
-    GuildPrivateThread,
-    GuildPublicThread,
-    GuildText,
-)
-from dis_snek.models.enums import Permissions
-
-import pymysql
 from dis_snek.client import Snake
-from dis_snek.models.application_commands import (
-    OptionTypes,
-    slash_command,
-    slash_option,
-)
+from dis_snek.models.application_commands import slash_command
 from dis_snek.models.context import InteractionContext
 from dis_snek.models.discord_objects.embed import Embed
 from dis_snek.models.listener import listen
-from dotenv import load_dotenv
 
-from utils.database import Database
-from utils.config import db_login, token
-from utils.models import Star
+from utils.config import token
 
 bot = Snake(sync_interactions=True, delete_unused_application_cmds=True)
 
