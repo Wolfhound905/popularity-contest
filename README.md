@@ -4,7 +4,7 @@
 [Discord Server](https://discord.gg/wSQ92ng2f9)
 
 ## What makes this bot special?
-[Popularity Contest](https://discord.com/api/oauth2/authorize?client_id=900353078128173097&permissions=274878032976&scope=bot%20applications.commands) is coded in a fantastic new Discord Python API wrapper called [Dis-Snek](https://github.com/Discord-Snake-Pit/Dis-Snek). It is very fun to make bots with and very intuitive.
+[Popularity Contest](https://discord.com/api/oauth2/authorize?client_id=900353078128173097&permissions=274878032976&scope=bot%20applications.commands) is coded with a fantastic new Discord Python API wrapper called [Dis-Snek](https://github.com/Discord-Snake-Pit/Dis-Snek). It is very fun to make bots with and very intuitive.
 
 
 ## Usage
