@@ -12,6 +12,7 @@ bot = Snake(sync_interactions=True, delete_unused_application_cmds=True)
 @listen()
 async def on_ready():
     print(f"Logged in as: {bot.user}")
+    print(f"Servers: {len(bot.guilds)}")
 
 
 @slash_command("help", "Basic instructions and what this bot is")
@@ -22,6 +23,7 @@ async def help(ctx: InteractionContext):
         color="#F9AC42",
     )
     embed.add_field("setup", "Sets up the starboard for the server")
+    embed.add_field("More Info", f"No feature is blocked behind a vote wall, but if you are feeling kind could you [upvote](https://top.gg/bot/{bot.user.id}/vote)")
     await ctx.send(embeds=[embed])
 
 

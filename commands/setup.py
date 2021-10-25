@@ -75,7 +75,7 @@ class Setup(Scale):
         else:
             embed = Embed(
                 "Error",
-                "Missing `manage server` permission.",
+                "You are missing `manage server` permission.",
                 color="#EB4049",
             )
         await ctx.send(embeds=[embed])

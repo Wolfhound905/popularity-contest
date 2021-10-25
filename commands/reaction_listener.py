@@ -52,7 +52,9 @@ class ReactionListener(Scale):
                 else:
                     """Add star"""
                     embed = Embed(
-                        description=(msg.content if msg.content != "" else None)
+                        description=(msg.content if msg.content != "" else None),
+                        color="#FFAC32"
+                    
                     )
                     author = msg.author
                     embed.set_author(name=author.tag, icon_url=author.avatar.url)
@@ -62,7 +64,7 @@ class ReactionListener(Scale):
                     else:
                         referenced_msg = ""
                     embed.add_field(
-                        name="──────",
+                        name=u"\u200b",
                         value=f"[Original Message]({msg.jump_url}) {referenced_msg}",
                     )
                     for img in msg.attachments:
@@ -70,6 +72,8 @@ class ReactionListener(Scale):
                     star_channel = await self.bot.get_channel(
                         self.db.get_star_channel(msg.guild.id)
                     )
+
+                    embed.timestamp = msg.timestamp
                     star_id = await star_channel.send(
                         content=f"⭐ **{emoji.count}**", embeds=[embed]
                     )
