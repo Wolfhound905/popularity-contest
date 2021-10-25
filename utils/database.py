@@ -63,9 +63,6 @@ class Database:
         )
         return
 
-
-
-
 # here is the table structure for you self hosters
 
 # CREATE TABLE popularity_contest.stars (
