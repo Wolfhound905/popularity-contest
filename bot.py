@@ -19,7 +19,7 @@ async def on_ready():
 async def help(ctx: InteractionContext):
     embed = Embed(
         "Starboard Help",
-        "While the name of the bot is Popularity Contest, thats bassicly what a starboard is. A few of the commads I have or will be adding are listed below. 💫",
+        "While the name of the bot is Popularity Contest, thats basically what a starboard is. A few of the commands I have or will be adding are listed below. 💫",
         color="#F9AC42",
     )
     embed.add_field("setup", "Sets up the starboard for the server")
