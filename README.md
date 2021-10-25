@@ -5,8 +5,8 @@
 
 
 ## Usage
-See a message you like? 🌠it!
-![](https://cdn.discordapp.com/attachments/860800420569546772/901996911257595944/unknown.png)
+See a message you like? 🌠it!\
+![](https://cdn.discordapp.com/attachments/860800420569546772/901996911257595944/unknown.png)\
 ![](https://media.discordapp.net/attachments/860800420569546772/901996109944209429/unknown.png)
 
 ## Contributing
