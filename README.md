@@ -14,7 +14,6 @@
 See a message you like? 🌠it!\
 ![](https://cdn.discordapp.com/attachments/860800420569546772/901996911257595944/unknown.png)\
 ![](https://media.discordapp.net/attachments/860800420569546772/901996109944209429/unknown.png)
-[![Discord Bots](https://top.gg/api/widget/servers/900353078128173097.svg)(https://top.gg/bot/900353078128173097)]
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
