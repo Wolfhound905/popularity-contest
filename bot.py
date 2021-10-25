@@ -5,6 +5,7 @@ from dis_snek.models.discord_objects.channel import (
     GuildPublicThread,
     GuildText,
 )
+from dis_snek.models.enums import Permissions
 
 import pymysql
 from dis_snek.client import Snake
@@ -54,48 +55,56 @@ async def on_ready():
     OptionTypes.INTEGER,
 )
 async def setup(ctx: InteractionContext, channel, min_star_count:int = None):
-    if type(channel) not in [GuildPrivateThread, GuildPublicThread, GuildText]:
-        error = Embed(
-            title="Error",
-            description="Channel must be a text channel",
-            color="#EB4049",
-        )
-        await ctx.send(embeds=[error])
-        return
-    if min_star_count < 1:
-        error = Embed(
-            title="Error",
-            description="Minimum star count must be greater than 0",
-            color="#EB4049",
-        )
-        await ctx.send(embeds=[error])
-        return
-    try:
-        tmp_msg = await channel.send(".")
-        await tmp_msg.delete()
-    except Forbidden:
-        error = Embed(
-            title="Error",
-            description="I don't have permission to send messages in this channel",
-            color="#EB4049",
-        )
-        await ctx.send(embeds=[error])
-        return
-    min_stars = db.min_stars(ctx.guild.id)
-    if min_star_count is None and min_stars:
-        min_star_count = min_stars
+    if await ctx.author.has_permission(Permissions.MANAGE_GUILD):
+        if type(channel) not in [GuildPrivateThread, GuildPublicThread, GuildText]:
+            error = Embed(
+                title="Error",
+                description="Channel must be a text channel",
+                color="#EB4049",
+            )
+            await ctx.send(embeds=[error])
+            return
+        if min_star_count < 1:
+            error = Embed(
+                title="Error",
+                description="Minimum star count must be greater than 0",
+                color="#EB4049",
+            )
+            await ctx.send(embeds=[error])
+            return
+        try:
+            tmp_msg = await channel.send(".")
+            await tmp_msg.delete()
+        except Forbidden:
+            error = Embed(
+                title="Error",
+                description="I don't have permission to send messages in this channel",
+                color="#EB4049",
+            )
+            await ctx.send(embeds=[error])
+            return
+        min_stars = db.min_stars(ctx.guild.id)
+        if min_star_count is None and min_stars:
+            min_star_count = min_stars
 
-    db.setup(ctx.guild.id, channel.id, min_star_count)
-    embed = Embed(
-        "⭐ Setup Complete!",
-        f"Posting to {channel.mention} with a minimum star count of {min_star_count}",
-        color="#F9AC42",
-    )
+        db.setup(ctx.guild.id, channel.id, min_star_count)
+        embed = Embed(
+            "⭐ Setup Complete!",
+            f"Posting to {channel.mention} with a minimum star count of {min_star_count}",
+            color="#F9AC42",
+        )
+    else:
+        embed = Embed(
+            "Error",
+            "Missing `manage server` permission.",
+            color="#EB4049",
+        )
     await ctx.send(embeds=[embed])
 
 
 @listen()
 async def on_message_reaction_remove(event):
+    print("Saw reaction")
     min_stars = db.min_stars(event.message.guild.id)
     if min_stars is None: return
     msg = event.message
@@ -117,6 +126,7 @@ async def on_message_reaction_remove(event):
 
 @listen()
 async def on_message_reaction_add(event):
+    print("Saw reaction")
     min_stars = db.min_stars(event.message.guild.id)
     if min_stars is None: return
     msg = event.message
