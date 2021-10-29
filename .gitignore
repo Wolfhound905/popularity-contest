@@ -3,3 +3,4 @@
 .env
 stars.db
 /.vscode
+logs.log
