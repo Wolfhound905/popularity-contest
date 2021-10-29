@@ -1,3 +1,6 @@
+import dis_snek
+import logging
+
 from dis_snek.client import Snake
 from dis_snek.models.application_commands import slash_command
 from dis_snek.models.context import InteractionContext
@@ -6,7 +9,11 @@ from dis_snek.models.listener import listen
 
 from utils.config import token
 
-bot = Snake(sync_interactions=True, delete_unused_application_cmds=True)
+logging.basicConfig(filename="logs.log")
+cls_log = logging.getLogger(dis_snek.const.logger_name)
+cls_log.setLevel(logging.DEBUG)
+
+bot = Snake(sync_interactions=True, delete_unused_application_cmds=True, asyncio_debug=True, default_prefix="⭐")
 
 
 @listen()
@@ -26,8 +33,8 @@ async def help(ctx: InteractionContext):
     embed.add_field("More Info", f"No feature is blocked behind a vote wall, but if you are feeling kind could you [upvote](https://top.gg/bot/{bot.user.id}/vote)")
     await ctx.send(embeds=[embed])
 
-
-bot.grow_scale("commands.reaction_listener")
+bot.grow_scale("commands.star_listener")
 bot.grow_scale("commands.setup")
+bot.grow_scale("commands.popular")
 
 bot.start(token)
