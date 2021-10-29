@@ -152,7 +152,17 @@ class ReactionListener(Scale):
             self.db.get_star_channel(star.guild_id)
         )
         original = await star_channel.get_message(star.star_id)
-        await original.edit(content=f"⭐ **{new_count}**")
+        match new_count:
+            case new_count if new_count in range(0, 7):
+                await original.edit(content=f"⭐ **{new_count}**")
+            case new_count if new_count in range(7, 13):
+                await original.edit(content=f"🌟 **{new_count}**")
+            case new_count if new_count in range(13, 17):
+                await original.edit(content=f"✨ **{new_count}**")
+            case new_count if new_count in range(17, 24):
+                await original.edit(content=f"💫 **{new_count}**")
+            case new_count if new_count > 23:
+                await original.edit(content=f"🌠 **{new_count}**")       
 
 
 def setup(bot):
