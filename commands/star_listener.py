@@ -112,7 +112,7 @@ class ReactionListener(Scale):
                 content=f"⭐ **{emoji.count}**", embeds=[embed]
             )
             self.db.add_star(
-                star_id.id, msg.id, msg.guild.id, author.id, emoji.count
+                star_id.id, msg.id, msg.channel.id, msg.guild.id, author.id, emoji.count
             )
             reactors = []
             for i in range(0, emoji.count, 100):

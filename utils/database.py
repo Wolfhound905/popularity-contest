@@ -3,6 +3,7 @@ from typing import Any, Union
 from pymysql.connections import Connection
 from pymysql.cursors import Cursor
 from utils.models import Star
+from utils.errors import NoResults
 from dis_snek.client import Snake
 
 
@@ -42,20 +43,21 @@ class Database:
         fetched = self.__db.fetchone()
         if fetched is None:
             return None
-        return Star(fetched, _id)
+        return Star(fetched, self.get_star_channel(fetched["guild_id"]), _id)
 
     def add_star(
         self,
         star_id: int,
         message_id: int,
+        message_channel_id: int,
         guild_id: int,
         author_id: int,
         star_count: int,
     ) -> NoneType:
         """Adds a star to the starboard"""
         self.__db.execute(
-            "INSERT INTO stars (star_id, message_id, guild_id, author_id, star_count) VALUES (%s, %s, %s, %s, %s);",
-            (star_id, message_id, guild_id, author_id, star_count),
+            "INSERT INTO stars (star_id, message_id, message_channel_id, guild_id, author_id, star_count) VALUES (%s, %s, %s, %s, %s, %s);",
+            (star_id, message_id, message_channel_id, guild_id, author_id, star_count),
         )
         return
 
@@ -65,17 +67,20 @@ class Database:
         """Updates the reactors for a star"""
         data = list((r, message_id, star_id) for r in reactors)
         self.__db.execute(
-            """DELETE FROM star_reactors WHERE star_id = %s AND message_id = %s;""", (star_id, message_id)
+            """DELETE FROM star_reactors WHERE star_id = %s AND message_id = %s;""",
+            (star_id, message_id),
         )
         self.__db.executemany(
-            """INSERT INTO star_reactors (usr_id, message_id, star_id) VALUES (%s, %s, %s);""", data
+            """INSERT INTO star_reactors (usr_id, message_id, star_id) VALUES (%s, %s, %s);""",
+            data,
         )
         return
 
     def remove_reactor(self, reactor_id: int, _id: int) -> NoneType:
         """Removes a reactor from the starboard"""
         self.__db.execute(
-            "DELETE FROM star_reactors WHERE usr_id = %s AND star_id = %s OR message_id = %s;", (reactor_id, _id, _id)
+            "DELETE FROM star_reactors WHERE usr_id = %s AND star_id = %s OR message_id = %s;",
+            (reactor_id, _id, _id),
         )
         return
 
@@ -103,13 +108,62 @@ class Database:
         return
 
     def get_stars(self, guild_id: int) -> list:
-        """Gets all the stars for a guild"""
+        """Gets all the stars for a guild
+        
+        Returns: list of Star class
+        """
         self.__db.execute(
-            "SELECT * FROM stars WHERE guild_id = %s ORDER BY star_count DESC;", (guild_id,)
+            "SELECT * FROM stars WHERE guild_id = %s ORDER BY star_count DESC;",
+            (guild_id,),
         )
         stars = self.__db.fetchall()
-        return [Star(s, s["star_id"]) for s in stars]
+        return [Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in stars]
+
+    def get_most_popular(self, guild_id: int) -> Union[list, int]:
+        print()
+        """Gets the most popular stars for a guild"""
+        self.__db.execute(
+            """SELECT * FROM popularity_contest.stars WHERE author_id = (
+                    SELECT author_id
+                    FROM popularity_contest.stars
+                    WHERE guild_id = %s
+                    GROUP BY author_id
+                    ORDER BY SUM(star_count) DESC
+                    LIMIT 1
+                )
+                AND guild_id = %s
+                ORDER BY star_count DESC
+            """,
+            (guild_id, guild_id),
+        ) # Gets all stars of author with most stars.
+        fetched = self.__db.fetchall()
+        if len(fetched) == 0:
+            raise NoResults("No results found.")
+        most_popular_user_stars = [Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in fetched]
+        total_count = sum(s.star_count for s in most_popular_user_stars)
+        return most_popular_user_stars, total_count
+
+    def get_user_stats(self, guild_id: int, user_id: int) -> Union[list, int]:
+        """Gets the stats for a user"""
+        self.__db.execute(
+            """SELECT * FROM popularity_contest.stars WHERE author_id = %s AND guild_id = %s;""",
+            (user_id, guild_id),
+        )
+        fetched = self.__db.fetchall()
+        if len(fetched) == 0:
+            raise NoResults("No results found.")
+        users_stars = [Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in fetched]
+        total_count = sum(s.star_count for s in users_stars)
+        return users_stars, total_count
+
         
+
+# SELECT author_id
+# FROM popularity_contest.stars
+# WHERE guild_id = 838667622245597194
+# GROUP BY author_id
+# ORDER BY SUM(star_count) DESC
+# LIMIT 1
 
 
 # here is the table structure for you self hosters
