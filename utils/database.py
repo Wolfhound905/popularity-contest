@@ -117,6 +117,8 @@ class Database:
             (guild_id,),
         )
         stars = self.__db.fetchall()
+        if len(stars) == 0:
+            raise NoResults("No stars found")
         return [Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in stars]
 
     def get_most_popular(self, guild_id: int) -> Union[list, int]:
@@ -146,7 +148,7 @@ class Database:
     def get_user_stats(self, guild_id: int, user_id: int) -> Union[list, int]:
         """Gets the stats for a user"""
         self.__db.execute(
-            """SELECT * FROM popularity_contest.stars WHERE author_id = %s AND guild_id = %s;""",
+            """SELECT * FROM popularity_contest.stars WHERE author_id = %s AND guild_id = %s ORDER BY star_count DESC;""",
             (user_id, guild_id),
         )
         fetched = self.__db.fetchall()
