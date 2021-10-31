@@ -13,6 +13,7 @@ class Database:
         self.__db: Cursor = self.__con.cursor()
 
     def setup(self, guild_id: int, channel_id: int, star_count: int) -> NoneType:
+        self.__con.ping(reconnect=True)
         self.__db.execute(
             "REPLACE INTO configuration (guild_id, star_channel, min_star_count) VALUES (%s, %s, %s);",
             (guild_id, channel_id, star_count),
@@ -20,6 +21,7 @@ class Database:
         return
 
     def min_stars(self, guild_id: int) -> Union[int, None]:
+        self.__con.ping(reconnect=True)
         self.__db.execute(
             "SELECT min_star_count FROM configuration WHERE guild_id = %s;", (guild_id,)
         )
@@ -29,6 +31,7 @@ class Database:
         return int(fetched["min_star_count"])
 
     def get_star_channel(self, guild_id: int) -> Union[int, NoneType]:
+        self.__con.ping(reconnect=True)
         """Gets the starboard channel ID"""
         self.__db.execute(
             "SELECT star_channel FROM configuration WHERE guild_id = %s;", (guild_id,)
@@ -36,13 +39,13 @@ class Database:
         return self.__db.fetchone()["star_channel"]
 
     def check_existing(self, _id: int) -> Union[Star, None]:
+        self.__con.ping(reconnect=True)
         """Checks for existing star in the starboard"""
         self.__db.execute(
             "SELECT * FROM stars WHERE star_id = %s OR message_id = %s;", (_id, _id)
         )
         fetched = self.__db.fetchone()
-        if fetched is None:
-            return None
+        if fetched is None: return None
         return Star(fetched, self.get_star_channel(fetched["guild_id"]), _id)
 
     def add_star(
@@ -55,6 +58,7 @@ class Database:
         star_count: int,
     ) -> NoneType:
         """Adds a star to the starboard"""
+        self.__con.ping(reconnect=True)
         self.__db.execute(
             "INSERT INTO stars (star_id, message_id, message_channel_id, guild_id, author_id, star_count) VALUES (%s, %s, %s, %s, %s, %s);",
             (star_id, message_id, message_channel_id, guild_id, author_id, star_count),
@@ -65,6 +69,7 @@ class Database:
         self, reactors: list, message_id: int, star_id: int
     ) -> NoneType:
         """Updates the reactors for a star"""
+        self.__con.ping(reconnect=True)
         data = list((r, message_id, star_id) for r in reactors)
         self.__db.execute(
             """DELETE FROM star_reactors WHERE star_id = %s AND message_id = %s;""",
@@ -78,6 +83,7 @@ class Database:
 
     def remove_reactor(self, reactor_id: int, _id: int) -> NoneType:
         """Removes a reactor from the starboard"""
+        self.__con.ping(reconnect=True)
         self.__db.execute(
             "DELETE FROM star_reactors WHERE usr_id = %s AND star_id = %s OR message_id = %s;",
             (reactor_id, _id, _id),
@@ -86,6 +92,7 @@ class Database:
 
     def get_reactors(self, _id: int) -> list:
         """Gets the reactors for a star"""
+        self.__con.ping(reconnect=True)
         self.__db.execute(
             "SELECT usr_id FROM star_reactors WHERE star_id = %s OR message_id = %s;",
             (_id, _id),
@@ -95,6 +102,7 @@ class Database:
 
     def update_star(self, star_id: int, star_count: int) -> NoneType:
         """Updates the star count"""
+        self.__con.ping(reconnect=True)
         self.__db.execute(
             "UPDATE stars SET star_count = %s WHERE star_id = %s;",
             (star_count, star_id),
@@ -103,6 +111,7 @@ class Database:
 
     def remove_star(self, star_id: int) -> NoneType:
         """Removes a star from the starboard"""
+        self.__con.ping(reconnect=True)
         self.__db.execute("DELETE FROM star_reactors WHERE star_id = %s;", (star_id,))
         self.__db.execute("DELETE FROM stars WHERE star_id = %s;", (star_id,))
         return
@@ -112,6 +121,7 @@ class Database:
         
         Returns: list of Star class
         """
+        self.__con.ping(reconnect=True)
         self.__db.execute(
             "SELECT * FROM stars WHERE guild_id = %s ORDER BY star_count DESC;",
             (guild_id,),
@@ -124,6 +134,7 @@ class Database:
     def get_most_popular(self, guild_id: int) -> Union[list, int]:
         print()
         """Gets the most popular stars for a guild"""
+        self.__con.ping(reconnect=True)
         self.__db.execute(
             """SELECT * FROM popularity_contest.stars WHERE author_id = (
                     SELECT author_id
@@ -147,6 +158,7 @@ class Database:
 
     def get_user_stats(self, guild_id: int, user_id: int) -> Union[list, int]:
         """Gets the stats for a user"""
+        self.__con.ping(reconnect=True)
         self.__db.execute(
             """SELECT * FROM popularity_contest.stars WHERE author_id = %s AND guild_id = %s ORDER BY star_count DESC;""",
             (user_id, guild_id),
