@@ -1,5 +1,5 @@
-import dis_snek
-import logging
+# import dis_snek
+# import logging
 
 from dis_snek.client import Snake
 from dis_snek.models.application_commands import slash_command
@@ -9,11 +9,11 @@ from dis_snek.models.listener import listen
 
 from utils.config import token
 
-logging.basicConfig(filename="logs.log")
-cls_log = logging.getLogger(dis_snek.const.logger_name)
-cls_log.setLevel(logging.DEBUG)
+# logging.basicConfig(filename="logs.log")
+# cls_log = logging.getLogger(dis_snek.const.logger_name)
+# cls_log.setLevel(logging.DEBUG)
 
-bot = Snake(sync_interactions=True, delete_unused_application_cmds=True, asyncio_debug=True, default_prefix="⭐")
+bot = Snake(sync_interactions=True, delete_unused_application_cmds=True, default_prefix="⭐")
 
 
 @listen()
