@@ -14,7 +14,7 @@ from utils.config import token
 # cls_log.setLevel(logging.DEBUG)
 
 bot = Snake(
-    sync_interactions=False, delete_unused_application_cmds=False, default_prefix="⭐", activity="with the stars 🌠"
+    sync_interactions=True, delete_unused_application_cmds=True, default_prefix="⭐", activity="with the stars 🌠"
 )
 
 
