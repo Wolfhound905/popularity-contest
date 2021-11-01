@@ -30,7 +30,7 @@ class Setup(Scale):
     )
     @slash_option(
         "min_star_count",
-        "The minimum amount of stars to star a message",
+        "The minimum amount of stars to star a message Default 3",
         OptionTypes.INTEGER,
     )
     async def setup(self, ctx: InteractionContext, channel, min_star_count: int = None):
@@ -43,6 +43,14 @@ class Setup(Scale):
                 )
                 await ctx.send(embeds=[error])
                 return
+
+            min_stars = self.db.min_stars(ctx.guild.id)
+            if min_star_count is None:
+                if min_stars is None:
+                    min_star_count = 3
+                else:
+                    min_star_count = min_stars
+
             if min_star_count < 1:
                 error = Embed(
                     title="Error",
@@ -62,9 +70,6 @@ class Setup(Scale):
                 )
                 await ctx.send(embeds=[error])
                 return
-            min_stars = self.db.min_stars(ctx.guild.id)
-            if min_star_count is None and min_stars:
-                min_star_count = min_stars
 
             self.db.setup(ctx.guild.id, channel.id, min_star_count)
             embed = Embed(
@@ -83,3 +88,5 @@ class Setup(Scale):
 
 def setup(bot):
     Setup(bot)
+
+
