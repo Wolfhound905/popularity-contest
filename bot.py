@@ -68,7 +68,7 @@ async def invite(ctx: InteractionContext):
 bot.grow_scale("commands.star_listener")
 bot.grow_scale("commands.setup")
 bot.grow_scale("commands.popular")
-bot.grow_scale("commands.extra")
+# bot.grow_scale("commands.extra")
 
 
 bot.start(token)
