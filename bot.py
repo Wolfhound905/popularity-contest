@@ -14,7 +14,10 @@ from utils.config import token
 # cls_log.setLevel(logging.DEBUG)
 
 bot = Snake(
-    sync_interactions=True, delete_unused_application_cmds=True, default_prefix="⭐", activity="with the stars 🌠"
+    sync_interactions=True,
+    delete_unused_application_cmds=False,
+    default_prefix="⭐",
+    activity="with the stars 🌠",
 )
 
 
@@ -29,7 +32,7 @@ async def help(ctx: InteractionContext):
     embed = Embed(
         "Starboard Help",
         "While the name of the bot is Popularity Contest, thats basically what a starboard is. A few of the commands I have or will be adding are listed below. 💫",
-        color="#F9AC42",
+        color="#FAD54E",
     )
     embed.add_field("setup", "Sets up the starboard for the server")
     embed.add_field(
@@ -53,10 +56,10 @@ async def invite(ctx: InteractionContext):
                 "Tell your friends too 😉",
                 "Took you long enough 😆",
                 f"You are automaticly 100% cooler if you invite me.",
-                "Sheeeeesh"
+                "Sheeeeesh",
             ]
         ),
-        color="#F9AC42",
+        color="#FAD54E",
         url=f"https://discord.com/api/oauth2/authorize?client_id={bot.user.id}&permissions=274878032976&scope=bot%20applications.commands",
     )
     await ctx.send(embeds=[embed])
@@ -65,5 +68,7 @@ async def invite(ctx: InteractionContext):
 bot.grow_scale("commands.star_listener")
 bot.grow_scale("commands.setup")
 bot.grow_scale("commands.popular")
+bot.grow_scale("commands.extra")
+
 
 bot.start(token)
