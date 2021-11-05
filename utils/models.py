@@ -1,7 +1,5 @@
-
-
 class Star:
-    def __init__(self, star_dict: dict, star_channel_id:int, msg_id: int):
+    def __init__(self, star_dict: dict, star_channel_id: int, msg_id: int):
         self.__message_id = msg_id
         self.star_id = star_dict["star_id"]
         self.message_id = star_dict["message_id"]
@@ -20,7 +18,6 @@ class Star:
             return 0
         elif self.__message_id == self.star_id:
             return 1
-
 
 
 class MostPopular:
