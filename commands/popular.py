@@ -122,7 +122,7 @@ class Popular(Scale):
                         f"Hey look, {target_author.mention} is just as popular as me... 0 stars :(",
                         f"Yikes, {target_author.mention} has 0 stars 😬",
                         f"{target_author.mention} did not live up to their parent's expectations, which were already [middling](https://www.dictionary.com/browse/middling) at best.",
-                        f"{target_author.mention} forgot that they actually needed to be popular to receive stars."
+                        f"{target_author.mention} forgot that they actually needed to be popular to receive stars.",
                     ]
                 ),
                 color="#FFAC32",
@@ -157,6 +157,40 @@ class Popular(Scale):
             )
         embed.add_field("Top 3", stats)
 
+        await ctx.send(embeds=[embed])
+
+    @slash_command(
+        "global",
+        sub_cmd_name="stats",
+        description="View global stats",
+    )
+    async def global_stats(self, ctx: InteractionContext):
+        await ctx.defer()
+        message_total, star_total = self.db.get_global_stats()
+        embed = Embed(
+            "Global Stats 🌟",
+            choice(
+                [
+                    "Here are the global stars you requested",
+                    "Holy smokes that's a lot of stars",
+                    "I didn't even know I could count that high.",
+                    "People really like reacting to messages.",
+                ]
+            ),
+            color="#FFAC32",
+        )
+        msg = f"Total Stars: **{star_total}**\nTotal Starboard Count: **{message_total}**\nServers: **{len(self.bot.guilds)}**"
+        embed.add_field("Stats:", msg, False)
+        try:
+            stars = self.db.get_stars(ctx.guild.id)
+            # get sum of all stars in stars
+            star_count = sum(star.star_count for star in stars)
+
+            msg = f"**{round((star_count / star_total) * 100)}%** of all stars are from this server."
+            embed.add_field(f"{ctx.guild.name}'s Contributions", msg, False)
+        except NoResults:
+            pass
+        embed.set_footer("This is not the final form.")
         await ctx.send(embeds=[embed])
 
 

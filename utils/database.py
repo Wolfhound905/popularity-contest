@@ -1,5 +1,5 @@
 from types import NoneType
-from typing import Any, Union
+from typing import Any, List, Union
 from pymysql.connections import Connection
 from pymysql.cursors import Cursor
 from utils.models import Star
@@ -45,7 +45,8 @@ class Database:
             "SELECT * FROM stars WHERE star_id = %s OR message_id = %s;", (_id, _id)
         )
         fetched = self.__db.fetchone()
-        if fetched is None: return None
+        if fetched is None:
+            return None
         return Star(fetched, self.get_star_channel(fetched["guild_id"]), _id)
 
     def add_star(
@@ -116,9 +117,18 @@ class Database:
         self.__db.execute("DELETE FROM stars WHERE star_id = %s;", (star_id,))
         return
 
-    def get_stars(self, guild_id: int) -> list:
+    def get_global_stats(self) -> list:
+        """Gets the global starboard stats"""
+        self.__con.ping(reconnect=True)
+        self.__db.execute("SELECT SUM(star_count) AS star_total FROM stars")
+        star_total = self.__db.fetchone()["star_total"]
+        self.__db.execute("SELECT COUNT(*) as message_total FROM stars")
+        message_total = self.__db.fetchone()["message_total"]
+        return message_total, star_total
+
+    def get_stars(self, guild_id: int) -> List["Star"]:
         """Gets all the stars for a guild
-        
+
         Returns: list of Star class
         """
         self.__con.ping(reconnect=True)
@@ -148,11 +158,13 @@ class Database:
                 ORDER BY star_count DESC
             """,
             (guild_id, guild_id),
-        ) # Gets all stars of author with most stars.
+        )  # Gets all stars of author with most stars.
         fetched = self.__db.fetchall()
         if len(fetched) == 0:
             raise NoResults("No results found.")
-        most_popular_user_stars = [Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in fetched]
+        most_popular_user_stars = [
+            Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in fetched
+        ]
         total_count = sum(s.star_count for s in most_popular_user_stars)
         return most_popular_user_stars, total_count
 
@@ -166,11 +178,12 @@ class Database:
         fetched = self.__db.fetchall()
         if len(fetched) == 0:
             raise NoResults("No results found.")
-        users_stars = [Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in fetched]
+        users_stars = [
+            Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in fetched
+        ]
         total_count = sum(s.star_count for s in users_stars)
         return users_stars, total_count
 
-        
 
 # SELECT author_id
 # FROM popularity_contest.stars
