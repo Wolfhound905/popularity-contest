@@ -24,7 +24,12 @@ class Setup(Scale):
         self.bot = bot
         self.db = Database(pymysql.connect(**db_login))
 
-    @slash_command("setup", "Setup the Starboard channel and minumum star count")
+    @slash_command(
+        "setup",
+        "Some custamization up ahead",
+        sub_cmd_name="starboard",
+        sub_cmd_description="Setup the Starboard channel and minumum star count",
+    )
     @slash_option(
         "channel", "The channel to starboard messages to", OptionTypes.CHANNEL, True
     )
@@ -75,8 +80,46 @@ class Setup(Scale):
             embed = Embed(
                 "⭐ Setup Complete!",
                 f"Posting to {channel.mention} with a minimum star count of {min_star_count}",
-                color="#F9AC42",
+                color="#FAD54E",
             )
+        else:
+            embed = Embed(
+                "Error",
+                "You are missing `manage server` permission.",
+                color="#EB4049",
+            )
+        await ctx.send(embeds=[embed])
+
+    @setup.subcommand(
+        sub_cmd_name="filter",
+        sub_cmd_description="Filter certain words from going on the starboard.",
+    )
+    @slash_option(
+        "filter_words",
+        "List of blacklisted words seperated by spaces",
+        OptionTypes.STRING,
+        True,
+    )
+    async def filter(self, ctx: InteractionContext, filter_words: str):
+        if await ctx.author.has_permission(Permissions.MANAGE_GUILD):
+            # self.db.filter(ctx.guild.id, list)
+            filter_words = filter_words.split(" ")
+            if (
+                len(filter_words) == 0
+            ):  # this should nenver be possible if list is required
+                embed = Embed(
+                    "Error",
+                    "You must provide a list of words to filter",
+                    color="#EB4049",
+                )
+            filter_words = list(set(filter_words))
+            embed = Embed(
+                "Filter Complete!",
+                "The following words have been blacklisted from the starboard:\n"
+                + str(",".join([f"`{x}`" for x in filter_words])),
+                color="#FAD54E",
+            )
+            embed.set_footer("This is not functioning for the momment.")
         else:
             embed = Embed(
                 "Error",
@@ -88,5 +131,3 @@ class Setup(Scale):
 
 def setup(bot):
     Setup(bot)
-
-
