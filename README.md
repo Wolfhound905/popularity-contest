@@ -1,4 +1,4 @@
-# Popularity Contest ⭐
+# Popularity Contest ![pfp](https://cdn.discordapp.com/avatars/900353078128173097/9975d3f9ec1b94858a96ea634315854f.webp?size=32)
 
 [Popularity Contest](https://discord.com/api/oauth2/authorize?client_id=900353078128173097&permissions=274878032976&scope=bot%20applications.commands) is a Discord bot to keep track of those funny messages.\
 [Support/Suggestion Server](https://discord.gg/wSQ92ng2f9)\
@@ -8,12 +8,12 @@
 [Popularity Contest](https://discord.com/api/oauth2/authorize?client_id=900353078128173097&permissions=274878032976&scope=bot%20applications.commands) is coded with a fantastic new Discord Python API wrapper called [Dis-Snek](https://github.com/Discord-Snake-Pit/Dis-Snek). It is fun to make bots with and very intuitive.
 
 ## Features and Extra Info
-[Popularity Contest](https://discord.com/api/oauth2/authorize?client_id=900353078128173097&permissions=274878032976&scope=bot%20applications.commands) will keep track of messages that are reacted on with a `⭐`. Images and Gifs are supported in the embed. The bot has limited customizability for now but more is Coming Soon™️!
+[Popularity Contest](https://discord.com/api/oauth2/authorize?client_id=900353078128173097&permissions=274878032976&scope=bot%20applications.commands) will keep track of messages that are reacted on with a ⭐. Images and Gifs are supported in the embed. The bot has limited customizability for now but more is Coming Soon™️!
 
 ## Usage
 See a message you like? 🌠it!\
-![original message](https://media.discordapp.net/attachments/902005540023058444/904538019665678387/unknown.png)\
-![starboard message](https://media.discordapp.net/attachments/902005540023058444/904537843446198343/unknown.png)
+<img src="https://media.discordapp.net/attachments/902005540023058444/905981088470536192/popular_message.png" height="172"></img>\
+<img src="https://media.discordapp.net/attachments/902005540023058444/905981459582574602/the_star.png" height="350"></img>
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
