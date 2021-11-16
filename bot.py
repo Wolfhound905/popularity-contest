@@ -1,30 +1,49 @@
-# import dis_snek
-# import logging
+import dis_snek
+import logging
 
 from dis_snek.client import Snake
-from dis_snek.models.application_commands import slash_command
+from dis_snek.models.application_commands import (
+    slash_command,
+)
 from dis_snek.models.context import InteractionContext
 from dis_snek.models.discord_objects.embed import Embed
+from dis_snek.models.enums import Permissions, Status
 from dis_snek.models.listener import listen
 from random import choice
-from utils.config import token
 
-# logging.basicConfig(filename="logs.log")
-# cls_log = logging.getLogger(dis_snek.const.logger_name)
-# cls_log.setLevel(logging.DEBUG)
+from dis_snek.tasks.triggers import IntervalTrigger
+from utils.config import token, db_login
+from utils.misc import get_random_presence
+from utils.database import Database
+
+import pymysql
+from dis_snek.tasks import Task
+
+logging.basicConfig(filename="logs.log")
+cls_log = logging.getLogger(dis_snek.const.logger_name)
+cls_log.setLevel(logging.DEBUG)
 
 bot = Snake(
     sync_interactions=True,
-    delete_unused_application_cmds=False,
+    delete_unused_application_cmds=True,
     default_prefix="⭐",
-    activity="with the stars 🌠",
+    status=Status.DND,
+    activity="Star-ting",
 )
+
+bot.db = Database(pymysql.connect(**db_login))
+
+
+@Task.create(IntervalTrigger(seconds=25))
+async def status_change():
+    await bot.change_presence(Status.IDLE, get_random_presence(len(bot.guilds), bot.db))
 
 
 @listen()
 async def on_ready():
     print(f"Logged in as: {bot.user}")
     print(f"Servers: {len(bot.guilds)}")
+    status_change.start()
 
 
 @slash_command("help", "Basic instructions and what this bot is")
