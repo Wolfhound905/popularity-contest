@@ -66,38 +66,65 @@ class Database:
         )
         return
 
-    def update_reactors(
-        self, reactors: list, message_id: int, star_id: int
-    ) -> NoneType:
+    def update_reactors(self, reactors: list, star: Star) -> NoneType:
         """Updates the reactors for a star"""
         self.__con.ping(reconnect=True)
-        data = list((r, message_id, star_id) for r in reactors)
+        data = list((r, star.message_id, star.star_id, star.type) for r in reactors)
         self.__db.execute(
-            """DELETE FROM star_reactors WHERE star_id = %s AND message_id = %s;""",
-            (star_id, message_id),
+            """DELETE FROM star_reactors WHERE star_id = %s AND message_id = %s AND type = %s;""",
+            (star.star_id, star.message_id, star.type),
         )
         self.__db.executemany(
-            """INSERT INTO star_reactors (usr_id, message_id, star_id) VALUES (%s, %s, %s);""",
+            """INSERT INTO star_reactors (usr_id, message_id, star_id, type) VALUES (%s, %s, %s, %s);""",
             data,
         )
         return
 
-    def remove_reactor(self, reactor_id: int, _id: int) -> NoneType:
-        """Removes a reactor from the starboard"""
+    def add_reactor(
+        self, reactor_id: int, message_id: int, star_id: int, type: int
+    ) -> NoneType:
+        """Adds a reactor to the starboard"""
         self.__con.ping(reconnect=True)
         self.__db.execute(
-            "DELETE FROM star_reactors WHERE usr_id = %s AND star_id = %s OR message_id = %s;",
-            (reactor_id, _id, _id),
+            "INSERT INTO star_reactors (usr_id, message_id, star_id, type) VALUES (%s, %s, %s, %s);",
+            (reactor_id, message_id, star_id, type),
         )
         return
 
-    def get_reactors(self, _id: int) -> list:
-        """Gets the reactors for a star"""
+    def remove_reactor(self, reactor_id: int, _id: int, _type: int) -> NoneType:
+        """Removes a reactor from the starboard"""
         self.__con.ping(reconnect=True)
         self.__db.execute(
-            "SELECT usr_id FROM star_reactors WHERE star_id = %s OR message_id = %s;",
-            (_id, _id),
+            "DELETE FROM star_reactors WHERE usr_id = %s AND star_id = %s OR message_id = %s AND type = %s;",
+            (reactor_id, _id, _id, _type),
         )
+        return
+
+    def get_reactor(self, reactor_id: int, _id: int):
+        """Gets a star by its reactor ID"""
+        self.__con.ping(reconnect=True)
+        self.__db.execute(
+            "SELECT COUNT(*) FROM star_reactors WHERE usr_id = %s AND star_id = %s OR message_id = %s);",
+            (reactor_id, _id, _id),
+        )
+        fetched = self.__db.fetchone()
+        if fetched is None:
+            return None
+        return int(fetched["COUNT(*)"])
+
+    def get_reactors(self, _id: int, _type: int = None) -> list:
+        """Gets the reactors for a star"""
+        self.__con.ping(reconnect=True)
+        if _type is not None:
+            self.__db.execute(
+                "SELECT usr_id FROM star_reactors WHERE star_id = %s OR message_id = %s AND type = %s;",
+                (_id, _id, _type),
+            )
+        else:
+            self.__db.execute(
+                "SELECT usr_id FROM star_reactors WHERE star_id = %s OR message_id = %s;",
+                (_id, _id),
+            )
         reactors = self.__db.fetchall()
         return [r["usr_id"] for r in reactors]
 
@@ -142,7 +169,6 @@ class Database:
         return [Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in stars]
 
     def get_most_popular(self, guild_id: int) -> Union[list, int]:
-        print()
         """Gets the most popular stars for a guild"""
         self.__con.ping(reconnect=True)
         self.__db.execute(
