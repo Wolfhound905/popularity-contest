@@ -1,3 +1,5 @@
+from random import choice
+
 from dis_snek.models import Scale
 from dis_snek.models.application_commands import (
     OptionTypes,
@@ -9,20 +11,15 @@ from dis_snek.models.application_commands import (
 from dis_snek.models.context import InteractionContext
 from dis_snek.models.discord_objects.embed import Embed
 from dis_snek.models.enums import CommandTypes
-import pymysql
-
 from utils.database import Database
-from utils.config import db_login
 from utils.errors import NoResults
 from utils.models import Star
-import json
-from random import choice
 
 
 class Popular(Scale):
     def __init__(self, bot):
-        self.db = Database(pymysql.connect(**db_login))
         self.bot = bot
+        self.db: Database = self.bot.db
 
     # TODO SlashCommandChoice("person (in server)", "person")
     choices = [
@@ -162,7 +159,7 @@ class Popular(Scale):
     @slash_command(
         "global",
         sub_cmd_name="stats",
-        description="View global stats",
+        sub_cmd_description="View global ✨ stats",
     )
     async def global_stats(self, ctx: InteractionContext):
         await ctx.defer()

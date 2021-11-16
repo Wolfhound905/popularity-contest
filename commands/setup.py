@@ -13,8 +13,6 @@ from dis_snek.models.discord_objects.channel import (
 )
 from dis_snek.models.discord_objects.embed import Embed
 from dis_snek.models.enums import Permissions
-import pymysql
-from utils.config import db_login
 
 from utils.database import Database
 
@@ -22,7 +20,7 @@ from utils.database import Database
 class Setup(Scale):
     def __init__(self, bot):
         self.bot = bot
-        self.db = Database(pymysql.connect(**db_login))
+        self.db: Database = self.bot.db
 
     @slash_command(
         "setup",

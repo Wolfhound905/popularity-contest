@@ -1,3 +1,4 @@
+from os import remove
 from dis_snek.models import Scale
 from dis_snek.models.discord_objects.embed import Embed
 from dis_snek.models.listener import listen
@@ -9,7 +10,7 @@ import pymysql
 
 class ReactionListener(Scale):
     def __init__(self, bot):
-        self.db = Database(pymysql.connect(**db_login))
+        self.db: Database = self.bot.db
         self.bot = bot
 
     @listen()
@@ -40,10 +41,12 @@ class ReactionListener(Scale):
                 )
                 msg = await star_channel.get_message(star.star_id)
                 await msg.delete()
+            elif star and star.type == 1:
+                await self.update_star_count("remove", event.user_id, star, 0, msg)
 
         elif emoji.count >= min_stars:
             star = self.db.check_existing(msg.id)
-            if star and star.type == 0:
+            if star and star.type in [0, 1]:
                 """Update star count"""
                 await self.update_star_count(
                     "remove", event.author.id, star, emoji.count, msg
@@ -78,7 +81,7 @@ class ReactionListener(Scale):
         emoji = msg.reactions[index]
 
         star = self.db.check_existing(msg.id)
-        if star and star.type == 0:
+        if star and star.type in [0, 1]:
             """Update star count"""
             await self.update_star_count("add", event.author.id, star, emoji.count, msg)
 
@@ -131,11 +134,15 @@ class ReactionListener(Scale):
 
         _type: "add" or "remove"
         """
-        reactors = self.db.get_reactors(msg.id)
+        print(star.type)
+        reactors = self.db.get_reactors(msg.id, star.type)
+        print(len(reactors))
         if len(reactors) + 1 == new_count and _type == "add":
-            ...
-        elif len(reactors) == new_count and _type == "remove":
-            self.db.remove_reactor(event_author, star.star_id)
+            print(star.type)
+            self.db.add_reactor(event_author, star.message_id, star.star_id, star.type)
+        elif len(reactors) - 1 == new_count and _type == "remove":
+            print(star.type)
+            self.db.remove_reactor(event_author, star.star_id, star.type)
         else:
             index = None
             for x, emoji in enumerate(msg.reactions):
@@ -152,23 +159,24 @@ class ReactionListener(Scale):
                 )
                 reactors.extend([user.id for user in await thing.fetch()])
 
-            self.db.update_reactors(reactors, star.message_id, star.star_id)
+            self.db.update_reactors(reactors, star)
 
-        self.db.update_star(star.star_id, new_count)
-        star_channel = await self.bot.get_channel(
-            self.db.get_star_channel(star.guild_id)
-        )
-        original = await star_channel.get_message(star.star_id)
-        if new_count in range(0, 7):
-            await original.edit(content=f"⭐ **{new_count}**")
-        elif new_count in range(7, 13):
-            await original.edit(content=f"🌟 **{new_count}**")
-        elif new_count in range(13, 17):
-            await original.edit(content=f"✨ **{new_count}**")
-        elif new_count in range(17, 24):
-            await original.edit(content=f"💫 **{new_count}**")
-        elif new_count > 23:
-            await original.edit(content=f"🌠 **{new_count}**")
+        if star.type == 0:
+            self.db.update_star(star.star_id, new_count)
+            star_channel = await self.bot.get_channel(
+                self.db.get_star_channel(star.guild_id)
+            )
+            original = await star_channel.get_message(star.star_id)
+            if new_count in range(0, 7):
+                await original.edit(content=f"⭐ **{new_count}**")
+            elif new_count in range(7, 13):
+                await original.edit(content=f"🌟 **{new_count}**")
+            elif new_count in range(13, 17):
+                await original.edit(content=f"✨ **{new_count}**")
+            elif new_count in range(17, 24):
+                await original.edit(content=f"💫 **{new_count}**")
+            elif new_count > 23:
+                await original.edit(content=f"🌠 **{new_count}**")
 
 
 def setup(bot):
