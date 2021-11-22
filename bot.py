@@ -2,12 +2,13 @@ import dis_snek
 import logging
 
 from dis_snek.client import Snake
+from dis_snek.errors import InteractionMissingAccess
 from dis_snek.models.application_commands import (
     slash_command,
 )
 from dis_snek.models.context import InteractionContext
 from dis_snek.models.discord_objects.embed import Embed
-from dis_snek.models.enums import Permissions, Status
+from dis_snek.models.enums import  Status
 from dis_snek.models.listener import listen
 from random import choice
 
@@ -34,16 +35,24 @@ bot = Snake(
 bot.db = Database(pymysql.connect(**db_login))
 
 
-@Task.create(IntervalTrigger(seconds=25))
+@Task.create(IntervalTrigger(seconds=30))
 async def status_change():
     await bot.change_presence(Status.IDLE, get_random_presence(len(bot.guilds), bot.db))
+
+@Task.create(IntervalTrigger(seconds=30))
+async def ping_db():
+    bot.db.ping()
+
+
 
 
 @listen()
 async def on_ready():
+    status_change.start()
+    ping_db.start()
+    status_change()
     print(f"Logged in as: {bot.user}")
     print(f"Servers: {len(bot.guilds)}")
-    status_change.start()
 
 
 @slash_command("help", "Basic instructions and what this bot is")
