@@ -1,5 +1,4 @@
 from random import choice
-from typing import List
 
 from dis_snek.models.discord_objects.activity import Activity
 from dis_snek.models.enums import ActivityType
