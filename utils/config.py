@@ -17,3 +17,4 @@ db_login = {
 }
 
 token = environ["TOKEN"]
+topgg_token = environ["TOPGG_TOKEN"]
