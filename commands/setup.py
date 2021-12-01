@@ -89,35 +89,27 @@ class Setup(Scale):
         await ctx.send(embeds=[embed])
 
     @setup.subcommand(
-        sub_cmd_name="filter",
-        sub_cmd_description="Filter certain words from going on the starboard.",
+        sub_cmd_name="update_on_edit",
+        sub_cmd_description="Update starboard if message is updated",
     )
     @slash_option(
-        "filter_words",
-        "List of blacklisted words seperated by spaces",
-        OptionTypes.STRING,
-        True,
+        "enable", "Enable updating on message edit", OptionTypes.BOOLEAN, True
     )
-    async def filter(self, ctx: InteractionContext, filter_words: str):
+    async def update_on_edit(self, ctx: InteractionContext, enable: bool):
         if await ctx.author.has_permission(Permissions.MANAGE_GUILD):
-            # self.db.filter(ctx.guild.id, list)
-            filter_words = filter_words.split(" ")
-            if (
-                len(filter_words) == 0
-            ):  # this should nenver be possible if list is required
+            self.db.edit_config(ctx.guild.id, "sub_cmd_description", enable)
+            if enable:
                 embed = Embed(
-                    "Error",
-                    "You must provide a list of words to filter",
-                    color="#EB4049",
+                    "✅ Update on edit enabled",
+                    "Starboard post will not be updated if the message is edited",
+                    color="#FAD54E",
                 )
-            filter_words = list(set(filter_words))
-            embed = Embed(
-                "Filter Complete!",
-                "The following words have been blacklisted from the starboard:\n"
-                + str(",".join([f"`{x}`" for x in filter_words])),
-                color="#FAD54E",
-            )
-            embed.set_footer("This is not functioning for the momment.")
+            else:
+                embed = Embed(
+                    "✅ Update on edit disabled",
+                    "Starboard post will no longer be updated if edited",
+                    color="#FAD54E",
+                )
         else:
             embed = Embed(
                 "Error",
@@ -125,6 +117,44 @@ class Setup(Scale):
                 color="#EB4049",
             )
         await ctx.send(embeds=[embed])
+
+    # @setup.subcommand(
+    #     sub_cmd_name="filter",
+    #     sub_cmd_description="Filter certain words from going on the starboard.",
+    # )
+    # @slash_option(
+    #     "filter_words",
+    #     "List of blacklisted words seperated by spaces",
+    #     OptionTypes.STRING,
+    #     True,
+    # )
+    # async def filter(self, ctx: InteractionContext, filter_words: str):
+    #     if await ctx.author.has_permission(Permissions.MANAGE_GUILD):
+    #         # self.db.filter(ctx.guild.id, list)
+    #         filter_words = filter_words.split(" ")
+    #         if (
+    #             len(filter_words) == 0
+    #         ):  # this should nenver be possible if list is required
+    #             embed = Embed(
+    #                 "Error",
+    #                 "You must provide a list of words to filter",
+    #                 color="#EB4049",
+    #             )
+    #         filter_words = list(set(filter_words))
+    #         embed = Embed(
+    #             "Filter Complete!",
+    #             "The following words have been blacklisted from the starboard:\n"
+    #             + str(",".join([f"`{x}`" for x in filter_words])),
+    #             color="#FAD54E",
+    #         )
+    #         embed.set_footer("This is not functioning for the momment.")
+    #     else:
+    #         embed = Embed(
+    #             "Error",
+    #             "You are missing `manage server` permission.",
+    #             color="#EB4049",
+    #         )
+    #     await ctx.send(embeds=[embed])
 
 
 def setup(bot):

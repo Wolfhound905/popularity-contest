@@ -1,12 +1,10 @@
 from types import NoneType
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 from pymysql.connections import Connection
 from pymysql.cursors import Cursor
 from utils.models import Star
 from utils.errors import NoResults
 from dis_snek.client import Snake
-
-
 
 
 class Database:
@@ -15,7 +13,7 @@ class Database:
         self.__db: Cursor = self.__con.cursor()
 
     def ping(self) -> NoneType:
-        """Pings the database and reconnects """
+        """Pings the database and reconnects"""
         self.__con.ping(True)
         return
 
@@ -25,6 +23,34 @@ class Database:
             (guild_id, channel_id, star_count),
         )
         return
+
+    def edit_config(self, guild_id: int, column: str, value) -> NoneType:
+        """Edits the configuration of the guild"""
+        self.__db.execute(
+            "UPDATE configuration SET %s = %s WHERE guild_id = %s;",
+            (column, value, guild_id),
+        )
+        return
+
+    def get_update_edited_messages(self, guild_id: int) -> Union[bool, None]:
+        """Gets the update edited messages setting"""
+        self.__db.execute(
+            "SELECT update_edited_messages FROM configuration WHERE guild_id = %s;",
+            (guild_id,),
+        )
+        return self.__db.fetchone()["update_edited_messages"]
+
+    def get_config_value(self, guild_id: int, column: str) -> Union[Any, None]:
+        """Gets a configuration value"""
+
+        self.__db.execute(
+            "SELECT %s FROM configuration WHERE guild_id = %s;", (column, guild_id)
+        )
+        fetched = self.__db.fetchone()
+        print(fetched)
+        if fetched is None:
+            return None
+        return fetched[column]
 
     def min_stars(self, guild_id: int) -> Union[int, None]:
         self.__db.execute(
@@ -58,18 +84,31 @@ class Database:
         message_id: int,
         message_channel_id: int,
         guild_id: int,
+        star_channel: int,
         author_id: int,
         star_count: int,
-    ) -> NoneType:
+    ) -> Star:
         """Adds a star to the starboard"""
         self.__db.execute(
             "INSERT INTO stars (star_id, message_id, message_channel_id, guild_id, author_id, star_count) VALUES (%s, %s, %s, %s, %s, %s);",
             (star_id, message_id, message_channel_id, guild_id, author_id, star_count),
         )
-        return
+        return Star(
+            {
+                "star_id": star_id,
+                "message_id": message_id,
+                "guild_id": guild_id,
+                "author_id": author_id,
+                "star_count": star_count,
+                "message_channel_id": message_channel_id,
+            },
+            star_channel,
+            message_id,
+        )
 
     def update_reactors(self, reactors: list, star: Star) -> NoneType:
         """Updates the reactors for a star"""
+        # print("Updating Reactors")
         data = list((r, star.message_id, star.star_id, star.type) for r in reactors)
         self.__db.execute(
             """DELETE FROM star_reactors WHERE star_id = %s AND message_id = %s AND type = %s;""",
@@ -85,6 +124,7 @@ class Database:
         self, reactor_id: int, message_id: int, star_id: int, type: int
     ) -> NoneType:
         """Adds a reactor to the starboard"""
+        # print("Adding Reactor")
         self.__db.execute(
             "INSERT INTO star_reactors (usr_id, message_id, star_id, type) VALUES (%s, %s, %s, %s);",
             (reactor_id, message_id, star_id, type),
@@ -93,16 +133,18 @@ class Database:
 
     def remove_reactor(self, reactor_id: int, _id: int, _type: int) -> NoneType:
         """Removes a reactor from the starboard"""
+        # print("Removing Reactor")
         self.__db.execute(
-            "DELETE FROM star_reactors WHERE usr_id = %s AND star_id = %s OR message_id = %s AND type = %s;",
+            "DELETE FROM star_reactors WHERE usr_id = %s AND (star_id = %s OR message_id = %s) AND type = %s;",
             (reactor_id, _id, _id, _type),
         )
         return
 
     def get_reactor(self, reactor_id: int, _id: int):
         """Gets a star by its reactor ID"""
+        # print("Getting Reactor")
         self.__db.execute(
-            "SELECT COUNT(*) FROM star_reactors WHERE usr_id = %s AND star_id = %s OR message_id = %s);",
+            "SELECT COUNT(*) FROM star_reactors WHERE usr_id = %s AND (star_id = %s OR message_id = %s);",
             (reactor_id, _id, _id),
         )
         fetched = self.__db.fetchone()
@@ -112,14 +154,15 @@ class Database:
 
     def get_reactors(self, _id: int, _type: int = None) -> list:
         """Gets the reactors for a star"""
+        # print("Getting Reactors", _type)
         if _type is not None:
             self.__db.execute(
-                "SELECT usr_id FROM star_reactors WHERE star_id = %s OR message_id = %s AND type = %s;",
+                "SELECT usr_id FROM star_reactors WHERE (star_id = %s OR message_id = %s) AND type = %s;",
                 (_id, _id, _type),
             )
         else:
             self.__db.execute(
-                "SELECT usr_id FROM star_reactors WHERE star_id = %s OR message_id = %s;",
+                "SELECT DISTINCT usr_id FROM star_reactors WHERE star_id = %s OR message_id = %s;",
                 (_id, _id),
             )
         reactors = self.__db.fetchall()
@@ -127,6 +170,7 @@ class Database:
 
     def update_star(self, star_id: int, star_count: int) -> NoneType:
         """Updates the star count"""
+        # print("Updating Star")
         self.__db.execute(
             "UPDATE stars SET star_count = %s WHERE star_id = %s;",
             (star_count, star_id),
@@ -200,6 +244,30 @@ class Database:
         ]
         total_count = sum(s.star_count for s in users_stars)
         return users_stars, total_count
+
+    # Lottie extra stuff
+    def get_lottie(self, lottie_id) -> str | None:
+        """Gets the lottie url"""
+        self.__db.execute(
+            "SELECT gif_link FROM lottie_gifs WHERE lottie_id = %s", (lottie_id,)
+        )
+        fetched = self.__db.fetchone()
+        if fetched is None:
+            return None
+        return fetched["gif_link"]
+
+    def insert_lottie(self, lottie_id, url) -> None:
+        """Inserts a lottie url"""
+        self.__db.execute(
+            "INSERT INTO lottie_gifs (lottie_id, gif_link) VALUES (%s, %s)",
+            (lottie_id, url),
+        )
+        return
+
+    def remove_lottie(self, lottie_id) -> None:
+        """Removes a lottie url"""
+        self.__db.execute("DELETE FROM lottie_gifs WHERE lottie_id = %s", (lottie_id,))
+        return
 
 
 # SELECT author_id
