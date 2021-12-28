@@ -2,9 +2,10 @@ from types import NoneType
 from typing import Any, List, Optional, Union
 from pymysql.connections import Connection
 from pymysql.cursors import Cursor
-from utils.models import Star
+from utils.models import Filter, Star
 from utils.errors import NoResults
 from dis_snek.client import Snake
+from json import dumps, loads
 
 
 class Database:
@@ -27,8 +28,8 @@ class Database:
     def edit_config(self, guild_id: int, column: str, value) -> NoneType:
         """Edits the configuration of the guild"""
         self.__db.execute(
-            "UPDATE configuration SET %s = %s WHERE guild_id = %s;",
-            (column, value, guild_id),
+            "UPDATE configuration SET update_edited_messages = %s WHERE guild_id = %s;",
+            (value, guild_id),
         )
         return
 
@@ -115,7 +116,7 @@ class Database:
             (star.star_id, star.message_id, star.type),
         )
         self.__db.executemany(
-            """INSERT INTO star_reactors (usr_id, message_id, star_id, type) VALUES (%s, %s, %s, %s);""",
+            """REPLACE INTO star_reactors (usr_id, message_id, star_id, type) VALUES (%s, %s, %s, %s);""",
             data,
         )
         return
@@ -152,17 +153,24 @@ class Database:
             return None
         return int(fetched["COUNT(*)"])
 
-    def get_reactors(self, _id: int, _type: int = None) -> list:
+    def get_reactors(
+        self, _id: int, distinct: bool = False, star_type: int = None
+    ) -> list:
         """Gets the reactors for a star"""
-        # print("Getting Reactors", _type)
-        if _type is not None:
+        print("Getting Reactors", star_type)
+        if star_type is not None:
             self.__db.execute(
                 "SELECT usr_id FROM star_reactors WHERE (star_id = %s OR message_id = %s) AND type = %s;",
-                (_id, _id, _type),
+                (_id, _id, star_type),
+            )
+        elif distinct:
+            self.__db.execute(
+                "SELECT DISTINCT usr_id FROM star_reactors WHERE star_id = %s OR message_id = %s;",
+                (_id, _id),
             )
         else:
             self.__db.execute(
-                "SELECT DISTINCT usr_id FROM star_reactors WHERE star_id = %s OR message_id = %s;",
+                "SELECT usr_id FROM star_reactors WHERE star_id = %s OR message_id = %s;",
                 (_id, _id),
             )
         reactors = self.__db.fetchall()
@@ -191,19 +199,29 @@ class Database:
         message_total = self.__db.fetchone()["message_total"]
         return message_total, star_total
 
-    def get_stars(self, guild_id: int) -> List["Star"]:
+    def get_stars(self, guild_id: int = None) -> List["Star"]:
         """Gets all the stars for a guild
 
         Returns: list of Star class
         """
-        self.__db.execute(
-            "SELECT * FROM stars WHERE guild_id = %s ORDER BY star_count DESC;",
-            (guild_id,),
-        )
+        if guild_id is None:
+            self.__db.execute("SELECT * FROM stars ORDER BY star_count DESC;")
+        else:
+            self.__db.execute(
+                "SELECT * FROM stars WHERE guild_id = %s ORDER BY star_count DESC;",
+                (guild_id,),
+            )
         stars = self.__db.fetchall()
         if len(stars) == 0:
             raise NoResults("No stars found")
-        return [Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in stars]
+        if guild_id:
+            star_channel = self.get_star_channel(guild_id)
+            return [Star(s, star_channel, s["star_id"]) for s in stars]
+        else:
+            return [
+                Star(s, self.get_star_channel(s["guild_id"]), s["star_id"])
+                for s in stars
+            ]
 
     def get_most_popular(self, guild_id: int) -> Union[list, int]:
         """Gets the most popular stars for a guild"""
@@ -269,36 +287,93 @@ class Database:
         self.__db.execute("DELETE FROM lottie_gifs WHERE lottie_id = %s", (lottie_id,))
         return
 
+    def get_filter(self, guild_id: int) -> Filter | None:
+        """Gets the filter for a guild"""
+        self.__db.execute("SELECT * FROM filters WHERE guild_id = %s", (guild_id,))
+        fetched = self.__db.fetchone()
+        if fetched and fetched.get("guild_id"):
+            return Filter(fetched)
+        return None
 
-# SELECT author_id
-# FROM popularity_contest.stars
-# WHERE guild_id = 838667622245597194
-# GROUP BY author_id
-# ORDER BY SUM(star_count) DESC
-# LIMIT 1
+    def insert_filter(self, guild_id: int, filter_list: list, commit_mode: 1 | 2, filter_mode: int = None) -> Optional[Filter]:
+        """Inserts a filter into the database
 
+        Args:
+            filter_list (list): The list of filters to insert
+            commit_mode (int): The commit_mode of the filter
+                1: Overwrite
+                2: Append/Merge
+        """
+        if not self.get_filter(guild_id):
+            self.__db.execute(
+                "INSERT INTO filters (guild_id, filter_words) VALUES (%s, %s)",
+                (guild_id, "[]"),
+            )
 
-# here is the table structure for you self hosters
+        if filter_mode is not None:
+            self.__db.execute(
+                "UPDATE filters SET mode = %s WHERE guild_id = %s",
+                (filter_mode, guild_id),
+            )
 
-# CREATE TABLE popularity_contest.stars (
-# 	star_id varchar(100) NOT NULL,
-# 	message_id varchar(100) NOT NULL COMMENT 'ID of the stared message.',
-# 	author_id varchar(100) NULL,
-# 	star_count INT NOT NULL,
-# 	CONSTRAINT stars_PK PRIMARY KEY (message_id)
-# )
-# ENGINE=InnoDB
-# DEFAULT CHARSET=utf8mb4
-# COLLATE=utf8mb4_bin
-# COMMENT='Data for the stars across servers.';
+        filter_list = list(set(filter_list))
+        if commit_mode == 1:
+            # "UPDATE configuration SET update_edited_messages = %s WHERE guild_id = %s;",
+            self.__db.execute(
+                "UPDATE filters SET filter_words = %s WHERE guild_id = %s",
+                (dumps(filter_list), guild_id),
+            )
+        elif commit_mode == 2:
+            filter = self.get_filter(guild_id)
 
-# CREATE TABLE popularity_contest.configuration (
-# 	guild_id varchar(100) NOT NULL,
-# 	star_channel varchar(100) NOT NULL,
-# 	min_star_count varchar(100) NOT NULL,
-# 	CONSTRAINT configuration_PK PRIMARY KEY (guild_id)
-# )
-# ENGINE=InnoDB
-# DEFAULT CHARSET=utf8mb4
-# COLLATE=utf8mb4_0900_ai_ci
-# COMMENT='guild configurations';
+            if filter:
+                existing_filter_words = filter.filter_words
+                new_filter = list(
+                    set(
+                        existing_filter_words + filter_list
+                        if existing_filter_words
+                        else [] + filter_list
+                    )
+                )
+            else:
+                new_filter = filter_list
+            self.__db.execute(
+                "UPDATE filters SET filter_words = %s WHERE guild_id = %s",
+                (dumps(new_filter), guild_id),
+            )
+
+        return self.get_filter(guild_id)
+
+    def filter_toggle(self, guild_id: int, status: bool):
+        """Toggle the filter"""
+
+        self.__db.execute(
+            "UPDATE filters SET enabled = %s WHERE guild_id = %s",
+            (status, guild_id),
+        )
+        return
+
+    def toggle_filter_mode(self, guild_id: int, mode: 0 | 1):
+        """Toggle the filter mode"""
+
+        self.__db.execute(
+            "UPDATE filters SET mode = %s WHERE guild_id = %s",
+            (mode, guild_id),
+        )
+        return
+
+    def remove_filter(self, guild_id: int) -> None:
+        """Removes the filter for a guild"""
+        self.__db.execute(
+            "DELETE FROM filters WHERE guild_id = %s",
+            (guild_id),
+        )
+        return
+
+    def check_filter_enabled(self, guild_id: int) -> bool:
+        """Checks if the filter is enabled"""
+        self.__db.execute(
+            "SELECT enabled FROM filters WHERE guild_id = %s", (guild_id,)
+        )
+        fetched = self.__db.fetchone()
+        return fetched["filter_enabled"]

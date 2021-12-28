@@ -1,10 +1,15 @@
 from os import remove
 import re
+from typing import List
 from dis_snek.models import Scale
 from dis_snek.models.discord_objects.embed import Embed
 from dis_snek.models.discord_objects.message import Message
 from dis_snek.models.discord_objects.sticker import StickerFormatTypes
-from dis_snek.models.events.discord import MessageUpdate
+from dis_snek.models.events.discord import (
+    MessageDelete,
+    MessageReactionAdd,
+    MessageUpdate,
+)
 from dis_snek.models.file import File
 from dis_snek.models.listener import listen
 from dis_snek.models.events import MessageReactionRemove
@@ -13,15 +18,17 @@ from utils.models import Star
 import aiohttp
 import aiofiles
 import pyrlottie
+from asyncio.exceptions import TimeoutError
 
 
 class ReactionListener(Scale):
     def __init__(self, bot):
-        self.db: Database = self.bot.db
         self.bot = bot
+        self.db: Database = self.bot.db
 
     @listen()
     async def on_message_reaction_remove(self, event: MessageReactionRemove):
+        # print("Reaction removed")
         if event.emoji.name not in ["⭐"]:
             return
         min_stars = self.db.min_stars(event.message.guild.id)
@@ -69,9 +76,13 @@ class ReactionListener(Scale):
                 )
                 msg = await star_channel.get_message(star.star_id)
                 await msg.delete()
+            elif star and star.type == 1:
+                await self.update_star_count(
+                    "remove", event.author.id, star, emoji.count, msg
+                )
 
     @listen()
-    async def on_message_reaction_add(self, event):
+    async def on_message_reaction_add(self, event: MessageReactionAdd):
         if event.emoji.name not in ["⭐"]:
             return
 
@@ -90,16 +101,18 @@ class ReactionListener(Scale):
         star = self.db.check_existing(msg.id)
         if star and star.type in [0, 1]:
             """Update star count"""
+            # lprint("Updating star count")
             await self.update_star_count("add", event.author.id, star, emoji.count, msg)
 
         elif emoji.count >= min_stars and msg.author.id != self.bot.user.id:
+            # print("Creating star")
             star_channel = await self.bot.get_channel(
                 self.db.get_star_channel(msg.guild.id)
             )
 
-            embed = await self.embed_maker(msg)
+            embeds = await self.embed_maker(msg)
             star_id = await star_channel.send(
-                content=f"⭐ **{emoji.count}**", embeds=[embed]
+                content=f"⭐ **{emoji.count}**", embeds=embeds
             )
             star = self.db.add_star(
                 star_id.id,
@@ -107,7 +120,7 @@ class ReactionListener(Scale):
                 msg.channel.id,
                 msg.guild.id,
                 star_channel.id,
-                event.author.id,
+                msg.author.id,
                 emoji.count,
             )
             reactors = []
@@ -123,45 +136,48 @@ class ReactionListener(Scale):
         star = self.db.check_existing(event.after.id)
         if star and star.type == 0:
             x = self.db.get_update_edited_messages(event.after.guild.id)
-            print(x)
+            # print(x)
             if x:
                 channel = await self.bot.get_channel(star.star_channel_id)
                 msg = await channel.get_message(star.star_id)
-                embed = await self.embed_maker(event.after)
-                await msg.edit(content=f"⭐ **{star.star_count}**", embeds=[embed])
+                embeds = await self.embed_maker(event.after)
+                await msg.edit(content=f"⭐ **{star.star_count}**", embeds=embeds)
 
-    async def embed_maker(self, msg) -> Embed:
-        # embed stuff ----------------
-        embed = Embed(
-            description=(msg.content if msg.content != "" else None),
-            color="#FFAC32",
-        )
-        author = msg.author
-        embed.set_author(name=author.tag, icon_url=author.avatar.url)
-        referenced_msg = await msg.get_referenced_message()
-        if referenced_msg:
-            referenced_msg = f"| [Replied to..]({referenced_msg.jump_url})"
-        else:
-            referenced_msg = ""
-        embed.add_field(
-            name="\u200b",
-            value=f"[Original Message]({msg.jump_url}) {referenced_msg}",
-        )
-
-        # Checking for embedable images
-        link_regex = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"
-        links = [x.group() for x in re.finditer(link_regex, msg.content, re.MULTILINE)]
+    async def embed_maker(self, msg) -> List[Embed]:
         msg: Message
+
+        # Filter Stuff ----------------------
+
+        processed_message = msg.content
+        msg_filter = self.db.get_filter(msg.guild.id)
+        if msg_filter and msg_filter.enabled and msg_filter.filter_words:
+            if msg_filter.mode == 0:
+                for word in msg_filter.filter_words:
+                    processed_message.replace(word, f"||{word}||")
+            else:
+                for word in msg_filter.filter_words:
+                    if word in processed_message:
+                        processed_message = processed_message.replace(word, "#!@$%^&*")
+
+
+        # ----------------------------------
+
+
+        # Checking for embedable images -----------------
+        link_regex = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"
+        og_image_regex = r"property=\"og:image\" content=\"(.*?)\""
+        links = [x.group() for x in re.finditer(link_regex, msg.content, re.MULTILINE)]
+        final_image_links = []
         if msg.attachments:
             for attachment in msg.attachments:
                 if attachment.content_type.startswith("image"):
-                    embed.set_image(url=attachment.url)
+                    final_image_links.append(attachment.url)
                     continue
         elif msg.sticker_items:
             sticker = msg.sticker_items[0]
             if sticker.format_type in [StickerFormatTypes.PNG, StickerFormatTypes.APNG]:
                 base_url = "https://media.discordapp.net/stickers/{}.png?size=240"
-                embed.set_image(url=base_url.format(sticker.id))
+                final_image_links.append(base_url.format(sticker.id))
 
             elif sticker.format_type == StickerFormatTypes.LOTTIE:
                 link = self.db.get_lottie(sticker.id)
@@ -169,7 +185,7 @@ class ReactionListener(Scale):
                     if link:
                         async with session.head(link) as resp:
                             if resp.status == 200:
-                                embed.set_image(url=link)
+                                final_image_links.append(link)
                             else:
                                 self.db.remove_lottie(sticker.id)
                                 link = None
@@ -197,24 +213,77 @@ class ReactionListener(Scale):
                             self.db.insert_lottie(
                                 sticker.id, new_msg.attachments[0].url
                             )
-                            embed.set_image(url=new_msg.attachments[0].url)
+                            final_image_links = [new_msg.attachments[0].url]
                             remove(f"{sticker.id}.json")
                             remove(f"{sticker.id}.gif")
         elif len(links) > 0:
-            recieved_requests = []
-            async with aiohttp.ClientSession() as session:
-                for link in links:
-                    async with session.head(link) as resp:
-                        if resp.status == 200:
-                            recieved_requests.append(resp)
-            for req in recieved_requests:
-                if req.content_type.startswith("image"):
-                    embed.set_image(url=str(req.url))
-                    break
+            timeout = timeout = aiohttp.ClientTimeout(total=0.5)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                for link in list(set(links)):
+                    try:
+                        async with session.get(link) as response:
+                            if response.status == 200:
+                                if response.content_type.startswith("image"):
+                                    final_image_links.append(str(link))
+                                elif response.content_type == "text/html":
+                                    og_image = re.search(
+                                        og_image_regex,
+                                        await response.text(),
+                                        re.MULTILINE,
+                                    )
+                                    if og_image:
+                                        link = str(og_image.group(1))
+                                        if re.match(link_regex, link):
+                                            final_image_links.append(link)
+                            else:
+                                continue
+                    except TimeoutError:
+                        print(f"Took too long to respond: {link}")
+                        continue
+                    except Exception as e:
+                        print(f"Error: {e}")
+                        continue
+        # -------------------------------------------------
 
-        embed.timestamp = msg.timestamp
-        return embed
+        # embed stuff ----------------
+        embeds = []
+
+        base_embed = Embed(
+            description=(msg.content if msg.content != "" else None),
+            url=f"https://top.gg/bot/{self.bot.user.id}/vote",
+            color="#FFAC32",
+        )
+        base_embed.set_author(name=msg.author.tag, icon_url=msg.author.avatar.url)
+
+        referenced_msg = await msg.get_referenced_message()
+        if referenced_msg:
+            referenced_msg = f"| [Replied to..]({referenced_msg.jump_url})"
+        else:
+            referenced_msg = ""
+
+        base_embed.add_field(
+            name="\u200b",
+            value=f"[Original Message]({msg.jump_url}) {referenced_msg}",
+        )
+
+        embeds.append(base_embed)
+
+        if len(final_image_links) > 1:
+
+            base_embed.set_image(url=final_image_links[0])
+            image_embeds = [
+                Embed(url=f"https://top.gg/bot/{self.bot.user.id}/vote")
+                for i in final_image_links[1:4]
+            ]
+            for embed, link in zip(image_embeds, final_image_links[1:4]):
+                embed.set_image(url=link)
+                embeds.append(embed)
+
+        elif len(final_image_links) == 1:
+            base_embed.set_image(url=final_image_links[0])
         # -----------------------------
+
+        return embeds
 
     async def update_star_count(
         self, _type: str, event_author: int, star: Star, new_count: int, msg
@@ -223,7 +292,7 @@ class ReactionListener(Scale):
 
         _type: "add" or "remove"
         """
-        reactors = self.db.get_reactors(msg.id, star.type)
+        reactors = self.db.get_reactors(msg.id, star_type=star.type)
         # print("New count", new_count)
         # print("Star Type:", star.type)
         # print("Reactors", len(reactors))
@@ -231,7 +300,7 @@ class ReactionListener(Scale):
             # print(star.type)
             self.db.add_reactor(event_author, star.message_id, star.star_id, star.type)
         elif len(reactors) - 1 == new_count or len(reactors) == 0 and _type == "remove":
-            # print(star.type)
+            # print("Removing")
             self.db.remove_reactor(event_author, star.star_id, star.type)
         else:
             index = None
@@ -252,7 +321,8 @@ class ReactionListener(Scale):
 
             self.db.update_reactors(reactors, star)
 
-        total_reactors = len(self.db.get_reactors(msg.id))
+        total_reactors = len(self.db.get_reactors(msg.id, True))
+        # print("Total reactors:", total_reactors)
         self.db.update_star(star.star_id, total_reactors)
         star_channel = await self.bot.get_channel(
             self.db.get_star_channel(star.guild_id)
@@ -268,6 +338,17 @@ class ReactionListener(Scale):
             await original.edit(content=f"💫 **{total_reactors}**")
         elif total_reactors > 23:
             await original.edit(content=f"🌠 **{total_reactors}**")
+
+    @listen()
+    async def on_message_delete(self, event: MessageDelete):
+
+        star = self.db.check_existing(event.message.id)
+        if star:
+            self.db.remove_star(star.star_id)
+            if star.type == 0:
+                channel = await self.bot.get_channel(star.star_channel_id)
+                star_message = await channel.get_message(star.star_id)
+                await star_message.delete()
 
 
 def setup(bot):

@@ -8,6 +8,7 @@ from dis_snek.models.context import InteractionContext
 
 from utils.database import Database
 
+
 class ManageStars(Scale):
     def __init__(self, bot):
         self.bot = bot

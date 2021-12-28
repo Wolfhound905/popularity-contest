@@ -1,3 +1,6 @@
+import json
+
+
 class Star:
     def __init__(self, star_dict: dict, star_channel_id: int, msg_id: int):
         self.__message_id: int = int(msg_id)
@@ -26,3 +29,21 @@ class MostPopular:
             self.id = person_dict["id"]
             self.name = person_dict["name"]
             self.count = person_dict["count"]
+
+
+class Filter:
+    def __init__(self, filter_json):
+        self.guild_id = filter_json.get("guild_id")
+        self.enabled = filter_json.get("enabled")
+        self.mode = filter_json.get("mode")
+        self.filter_words = (
+            json.loads(filter_json.get("filter_words"))
+            if filter_json.get("filter_words")
+            else None
+        )
+
+    def __str__(self):
+        return f"Filter(guild_id={self.guild_id}, enabled={self.enabled}, mode={self.mode}, filter_words={self.filter_words})"
+
+    def __repr__(self):
+        return f"Filter(guild_id={self.guild_id}, enabled={self.enabled}, mode={self.mode}, filter_words={self.filter_words})"

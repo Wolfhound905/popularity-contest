@@ -1,7 +1,11 @@
+""" This contains stat commands """
+
 from random import choice
+from dis_snek.errors import NotFound
 
 from dis_snek.models import Scale
 from dis_snek.models.application_commands import (
+    ContextMenu,
     OptionTypes,
     SlashCommandChoice,
     context_menu,
@@ -50,10 +54,14 @@ class Popular(Scale):
                 )
                 return
             star: Star = max(guild_stars, key=lambda x: x.star_count)
-
+            print(star.author_id)
+            try:
+                author = await self.bot.get_member(star.author_id, star.guild_id)
+            except NotFound:
+                author = await self.bot.get_user(star.author_id)
             embed = Embed(
                 "Most Popular Message",
-                f"The *Most Popular Message* award goes to **{await self.bot.get_member(star.author_id, star.guild_id)}**",
+                f"The *Most Popular Message* award goes to **{author}**",
                 color="#FFAC32",
             )
             msg = await (await self.bot.get_channel(star.msg_channel_id)).get_message(
@@ -91,12 +99,12 @@ class Popular(Scale):
                 stats += f"\n**[Star {i + 1}]({star.star_jump_url})** - {star.star_count} stars"
             embed.add_field("Top 3", stats)
 
-        # await ctx.send(embeds=[embed])
         await ctx.send(embeds=[embed])
 
-    @context_menu("⭐ Stats", CommandTypes.USER)
+    @context_menu("Popularity", CommandTypes.USER)
     async def stats(self, ctx: InteractionContext):
         await ctx.defer()
+        print(ctx.target_id)
         target_author = list(ctx.resolved.users.values())[0]
         try:
             stars, total_count = self.db.get_user_stats(ctx.guild.id, target_author.id)

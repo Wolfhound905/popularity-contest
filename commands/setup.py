@@ -1,7 +1,9 @@
 from dis_snek.errors import Forbidden
+from dis_snek.http_requests import bot
 from dis_snek.models import Scale
 from dis_snek.models.application_commands import (
     OptionTypes,
+    SlashCommandChoice,
     slash_command,
     slash_option,
 )
@@ -37,14 +39,14 @@ class Setup(Scale):
         OptionTypes.INTEGER,
     )
     async def setup(self, ctx: InteractionContext, channel, min_star_count: int = None):
-        if await ctx.author.has_permission(Permissions.MANAGE_GUILD):
+        if ctx.author.has_permission(Permissions.MANAGE_GUILD):
             if type(channel) not in [GuildPrivateThread, GuildPublicThread, GuildText]:
                 error = Embed(
                     title="Error",
                     description="Channel must be a text channel",
                     color="#EB4049",
                 )
-                await ctx.send(embeds=[error])
+                await ctx.send(embeds=[error], ephemeral=True)
                 return
 
             min_stars = self.db.min_stars(ctx.guild.id)
@@ -60,9 +62,11 @@ class Setup(Scale):
                     description="Minimum star count must be greater than 0",
                     color="#EB4049",
                 )
-                await ctx.send(embeds=[error])
+                await ctx.send(embeds=[error], ephemeral=True)
                 return
             try:
+                # bot_member = await self.bot.get_member(self.bot.user.id, ctx.guild.id)
+                # print(await bot_member.channel_permissions(channel))
                 tmp_msg = await channel.send(".")
                 await tmp_msg.delete()
             except Forbidden:
@@ -96,8 +100,8 @@ class Setup(Scale):
         "enable", "Enable updating on message edit", OptionTypes.BOOLEAN, True
     )
     async def update_on_edit(self, ctx: InteractionContext, enable: bool):
-        if await ctx.author.has_permission(Permissions.MANAGE_GUILD):
-            self.db.edit_config(ctx.guild.id, "sub_cmd_description", enable)
+        if ctx.author.has_permission(Permissions.MANAGE_GUILD):
+            self.db.edit_config(ctx.guild.id, "update_edited_messages", enable)
             if enable:
                 embed = Embed(
                     "✅ Update on edit enabled",
@@ -110,51 +114,15 @@ class Setup(Scale):
                     "Starboard post will no longer be updated if edited",
                     color="#FAD54E",
                 )
+            hidden = False
         else:
             embed = Embed(
                 "Error",
                 "You are missing `manage server` permission.",
                 color="#EB4049",
             )
-        await ctx.send(embeds=[embed])
-
-    # @setup.subcommand(
-    #     sub_cmd_name="filter",
-    #     sub_cmd_description="Filter certain words from going on the starboard.",
-    # )
-    # @slash_option(
-    #     "filter_words",
-    #     "List of blacklisted words seperated by spaces",
-    #     OptionTypes.STRING,
-    #     True,
-    # )
-    # async def filter(self, ctx: InteractionContext, filter_words: str):
-    #     if await ctx.author.has_permission(Permissions.MANAGE_GUILD):
-    #         # self.db.filter(ctx.guild.id, list)
-    #         filter_words = filter_words.split(" ")
-    #         if (
-    #             len(filter_words) == 0
-    #         ):  # this should nenver be possible if list is required
-    #             embed = Embed(
-    #                 "Error",
-    #                 "You must provide a list of words to filter",
-    #                 color="#EB4049",
-    #             )
-    #         filter_words = list(set(filter_words))
-    #         embed = Embed(
-    #             "Filter Complete!",
-    #             "The following words have been blacklisted from the starboard:\n"
-    #             + str(",".join([f"`{x}`" for x in filter_words])),
-    #             color="#FAD54E",
-    #         )
-    #         embed.set_footer("This is not functioning for the momment.")
-    #     else:
-    #         embed = Embed(
-    #             "Error",
-    #             "You are missing `manage server` permission.",
-    #             color="#EB4049",
-    #         )
-    #     await ctx.send(embeds=[embed])
+            hidden = True
+        await ctx.send(embeds=[embed], ephemeral=hidden)
 
 
 def setup(bot):

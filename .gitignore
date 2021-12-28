@@ -4,3 +4,6 @@
 stars.db
 /.vscode
 logs.log
+reinstall.sh
+test.py
+test.ipynb
