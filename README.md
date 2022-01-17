@@ -1,6 +1,8 @@
 # Popularity Contest ![pfp](https://cdn.discordapp.com/avatars/900353078128173097/9975d3f9ec1b94858a96ea634315854f.webp?size=32)
 
-[![Discord Bots](https://top.gg/api/widget/servers/900353078128173097.svg)](https://top.gg/bot/900353078128173097)\
+[![Discord Bots](https://top.gg/api/widget/servers/900353078128173097.svg)](https://top.gg/bot/900353078128173097)
+[![Invite](https://img.shields.io/static/v1?label=bot&message=Invite%20me!&color=yellow)](https://top.gg/bot/900353078128173097)
+\
 [Popularity Contest](https://discord.com/api/oauth2/authorize?client_id=900353078128173097&permissions=274878032976&scope=bot%20applications.commands) is a Discord bot to keep track of those fun/entertaining/special messages.\
 [Support/Suggestion Server](https://discord.gg/wSQ92ng2f9)
 
