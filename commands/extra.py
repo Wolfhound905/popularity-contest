@@ -1,10 +1,4 @@
-from dis_snek.models import Scale
-from dis_snek.models.application_commands import (
-    OptionTypes,
-    slash_command,
-    slash_option,
-)
-from dis_snek.models.context import InteractionContext
+from dis_snek import OptionTypes, slash_command, slash_option, Scale, InteractionContext
 from utils.database import Database
 from utils.config import db_login
 import pymysql

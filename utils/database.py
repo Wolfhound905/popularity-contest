@@ -141,6 +141,15 @@ class Database:
         )
         return
 
+    def remove_reactor_by_id(self, _id: int) -> NoneType:
+        """Removes a reactor from the starboard"""
+        # print("Removing Reactor")
+        self.__db.execute(
+            "DELETE FROM star_reactors WHERE (star_id = %s OR message_id = %s)",
+            (_id, _id),
+        )
+        return
+
     def get_reactor(self, reactor_id: int, _id: int):
         """Gets a star by its reactor ID"""
         # print("Getting Reactor")
@@ -295,7 +304,13 @@ class Database:
             return Filter(fetched)
         return None
 
-    def insert_filter(self, guild_id: int, filter_list: list, commit_mode: 1 | 2, filter_mode: int = None) -> Optional[Filter]:
+    def insert_filter(
+        self,
+        guild_id: int,
+        filter_list: list,
+        commit_mode: 1 | 2,
+        filter_mode: int = None,
+    ) -> Optional[Filter]:
         """Inserts a filter into the database
 
         Args:

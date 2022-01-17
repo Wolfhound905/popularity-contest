@@ -1,20 +1,20 @@
 """ This contains stat commands """
 
 from random import choice
-from dis_snek.errors import NotFound
 
-from dis_snek.models import Scale
-from dis_snek.models.application_commands import (
+from dis_snek import (
     ContextMenu,
     OptionTypes,
     SlashCommandChoice,
     context_menu,
     slash_command,
     slash_option,
+    InteractionContext,
+    Embed,
+    CommandTypes,
+    NotFound,
+    Scale,
 )
-from dis_snek.models.context import InteractionContext
-from dis_snek.models.discord_objects.embed import Embed
-from dis_snek.models.enums import CommandTypes
 from utils.database import Database
 from utils.errors import NoResults
 from utils.models import Star
@@ -44,6 +44,7 @@ class Popular(Scale):
         required=True,
     )
     async def most_popular(self, ctx: InteractionContext, choice):
+        await ctx.defer()
         if choice == "message":
             try:
                 guild_stars = self.db.get_stars(ctx.guild.id)
@@ -59,6 +60,7 @@ class Popular(Scale):
                 author = await self.bot.get_member(star.author_id, star.guild_id)
             except NotFound:
                 author = await self.bot.get_user(star.author_id)
+
             embed = Embed(
                 "Most Popular Message",
                 f"The *Most Popular Message* award goes to **{author}**",
@@ -71,11 +73,21 @@ class Popular(Scale):
                 "Info",
                 f"Total stars: **{star.star_count}**\n[Starboard Post]({star.star_jump_url})\n[Original Message]({star.msg_jump_url})",
             )
-            embed.add_field("Message", msg.content if msg.content != "" else "\u200b")
+            if msg.content:
+                preview = (
+                    msg.content[: 100 - 3]
+                    + (msg.content[100 - 3 :], "...")[len(msg.content) > 100]
+                )
+            elif msg.content == "":
+                preview = "\u200b"
+
+            embed.add_field("Message", preview)
             if msg.attachments:
                 for attachment in msg.attachments:
                     if attachment.content_type.startswith("image"):
                         embed.set_image(url=attachment.url)
+
+            print(embed.to_dict())
 
         elif choice == "person":
             try:

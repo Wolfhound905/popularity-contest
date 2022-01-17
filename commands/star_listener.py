@@ -1,18 +1,25 @@
 from os import remove
 import re
 from typing import List
-from dis_snek.models import Scale
-from dis_snek.models.discord_objects.embed import Embed
-from dis_snek.models.discord_objects.message import Message
-from dis_snek.models.discord_objects.sticker import StickerFormatTypes
-from dis_snek.models.events.discord import (
+
+
+from dis_snek.api.events import (
+    MessageReactionRemove,
     MessageDelete,
     MessageReactionAdd,
     MessageUpdate,
 )
-from dis_snek.models.file import File
-from dis_snek.models.listener import listen
-from dis_snek.models.events import MessageReactionRemove
+
+from dis_snek.models import (
+    Embed,
+    Message,
+    StickerFormatTypes,
+    Scale,
+    File,
+    listen,
+)
+
+
 from utils.database import Database
 from utils.models import Star
 import aiohttp
@@ -159,9 +166,7 @@ class ReactionListener(Scale):
                     if word in processed_message:
                         processed_message = processed_message.replace(word, "#!@$%^&*")
 
-
         # ----------------------------------
-
 
         # Checking for embedable images -----------------
         link_regex = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"

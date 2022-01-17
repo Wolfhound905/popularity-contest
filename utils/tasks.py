@@ -1,7 +1,10 @@
-from dis_snek.models.enums import Status
-from dis_snek.models.listener import listen
-from dis_snek.tasks import Task
-from dis_snek.tasks.triggers import IntervalTrigger
+from dis_snek import (
+    Status,
+    listen,
+    Task,
+)
+from dis_snek.ext.tasks.triggers import IntervalTrigger
+
 from utils.misc import get_random_presence
 from utils.config import topgg_token
 from dis_snek.models import Scale
@@ -17,8 +20,8 @@ class Tasks(Scale):
         self.upload_stats.start()
         self.status_change.start()
         self.ping_db.start()
-        self.status_change()
-        self.upload_stats()
+        await self.status_change()
+        await self.upload_stats()
 
     @Task.create(IntervalTrigger(seconds=30))
     async def status_change(self):

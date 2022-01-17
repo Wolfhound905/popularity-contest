@@ -1,7 +1,20 @@
 import dis_snek
 import logging
 
-from dis_snek import Snake, slash_command, InteractionContext, Embed, Status, listen
+from dis_snek import (
+    Snake,
+    slash_command,
+    InteractionContext,
+    Embed,
+    Status,
+    listen,
+    slash_permission,
+    OptionTypes,
+    Permission,
+    PermissionTypes,
+    slash_option,
+)
+
 
 from utils.config import token, db_login
 from utils.database import Database
@@ -22,7 +35,7 @@ start_time = time()
 bot = Snake(
     sync_interactions=True,
     delete_unused_application_cmds=False,
-    default_prefix="⭐", # never used
+    default_prefix="⭐",  # never used
     status=Status.DND,
     activity="Star-ting",
 )
@@ -50,6 +63,24 @@ async def help(ctx: InteractionContext):
         f"No feature is blocked behind a vote wall, but if you are feeling kind could you [upvote](https://top.gg/bot/{bot.user.id}/vote) \👉\👈",
     )
     await ctx.send(embeds=[embed])
+
+
+# @slash_command("privacy", "Privacy Policy")
+# async def privacy(ctx: InteractionContext):
+#     embed = Embed(
+#         "Privacy Policy",
+
+
+@slash_command("debug", scopes=[902005056872775760])
+@slash_permission(
+    Permission(324352543612469258, 902005056872775760, PermissionTypes.USER, True)
+)
+@slash_option("channel_id", "Channel ID", opt_type=OptionTypes.STRING, required=True)
+@slash_option("message", "Message ID", opt_type=OptionTypes.STRING, required=True)
+async def debug(ctx: InteractionContext, channel_id, message):
+    channel = await bot.get_channel(int(channel_id))
+    message = await channel.get_message(int(message))
+    await ctx.send(f"{message.embeds}")
 
 
 bot.grow_scale("commands.star_listener")

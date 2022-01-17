@@ -1,8 +1,7 @@
 from random import choice
-
-from dis_snek.models.discord_objects.activity import Activity
-from dis_snek.models.enums import ActivityType
 from utils.database import Database
+
+from dis_snek import Activity, ActivityType
 
 
 def get_random_presence(guilds, db: Database) -> Activity:

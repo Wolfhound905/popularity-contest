@@ -1,20 +1,19 @@
-from dis_snek.errors import Forbidden
-from dis_snek.http_requests import bot
-from dis_snek.models import Scale
-from dis_snek.models.application_commands import (
+from operator import imod
+from dis_snek.client.errors import Forbidden
+
+from dis_snek import (
     OptionTypes,
-    SlashCommandChoice,
     slash_command,
     slash_option,
-)
-from dis_snek.models.context import InteractionContext
-from dis_snek.models.discord_objects.channel import (
+    Scale,
+    InteractionContext,
+    Embed,
+    CommandTypes,
+    Permissions,
     GuildPrivateThread,
     GuildPublicThread,
     GuildText,
 )
-from dis_snek.models.discord_objects.embed import Embed
-from dis_snek.models.enums import Permissions
 
 from utils.database import Database
 

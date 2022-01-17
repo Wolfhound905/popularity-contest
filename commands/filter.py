@@ -42,7 +42,11 @@ class FilterCommands(Scale):
         ],
     )
     async def filter_command(
-        self, ctx: InteractionContext, filter_words: str, commit_mode: int, mode:int = 0
+        self,
+        ctx: InteractionContext,
+        filter_words: str,
+        commit_mode: int,
+        mode: int = 0,
     ):
         if ctx.author.has_permission(Permissions.MANAGE_GUILD):
 
@@ -84,7 +88,7 @@ class FilterCommands(Scale):
     )
     @slash_option(
         "filter_mode",
-                "Either prevent message or hide filtered words. (Default: Hide)",
+        "Either prevent message or hide filtered words. (Default: Hide)",
         OptionTypes.INTEGER,
         True,
         choices=[
@@ -170,7 +174,6 @@ class FilterCommands(Scale):
                     f"Mode: {'*Hidden*' if filter.mode == 0 else '*Prevent*'}\n"
                     f"Words: ⤦\n{', '.join([f'`{word}`' for word in filter.filter_words])}",
                 )
-
 
         else:
             embed = Embed(
