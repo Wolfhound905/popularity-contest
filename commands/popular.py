@@ -115,7 +115,7 @@ class Popular(Scale):
 
     @context_menu("Popularity", CommandTypes.USER)
     async def stats(self, ctx: InteractionContext):
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
         print(ctx.target_id)
         target_author = list(ctx.resolved.users.values())[0]
         try:
