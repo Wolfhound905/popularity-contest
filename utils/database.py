@@ -18,6 +18,15 @@ class Database:
         self.__con.ping(True)
         return
 
+    def guilds_with_stars(self) -> List[int]:
+        """ Get a list of guild ids """
+        self.__db.execute(
+            "SELECT DISTINCT guild_id FROM stars;"
+        )
+        return [int(x['guild_id']) for x in self.__db.fetchall()]
+
+        
+
     def setup(self, guild_id: int, channel_id: int, star_count: int) -> NoneType:
         self.__db.execute(
             "REPLACE INTO configuration (guild_id, star_channel, min_star_count) VALUES (%s, %s, %s);",
@@ -208,7 +217,7 @@ class Database:
         message_total = self.__db.fetchone()["message_total"]
         return message_total, star_total
 
-    def get_stars(self, guild_id: int = None) -> List["Star"]:
+    def get_stars(self, guild_id: int = None, get_star_channel: bool = True) -> List["Star"]:
         """Gets all the stars for a guild
 
         Returns: list of Star class
@@ -224,7 +233,7 @@ class Database:
         if len(stars) == 0:
             raise NoResults("No stars found")
         if guild_id:
-            star_channel = self.get_star_channel(guild_id)
+            star_channel = self.get_star_channel(guild_id) if get_star_channel else 0
             return [Star(s, star_channel, s["star_id"]) for s in stars]
         else:
             return [
@@ -272,28 +281,28 @@ class Database:
         total_count = sum(s.star_count for s in users_stars)
         return users_stars, total_count
 
-    # Lottie extra stuff
-    def get_lottie(self, lottie_id) -> str | None:
-        """Gets the lottie url"""
+    # animated_sticker extra stuff
+    def get_animated_sticker(self, sticker_id) -> str | None:
+        """Gets the animated_sticker url"""
         self.__db.execute(
-            "SELECT gif_link FROM lottie_gifs WHERE lottie_id = %s", (lottie_id,)
+            "SELECT gif_link FROM animated_sticker_gifs WHERE sticker_id = %s", (sticker_id,)
         )
         fetched = self.__db.fetchone()
         if fetched is None:
             return None
         return fetched["gif_link"]
 
-    def insert_lottie(self, lottie_id, url) -> None:
-        """Inserts a lottie url"""
+    def insert_animated_sticker(self, sticker_id, url) -> None:
+        """Inserts a animated_sticker url"""
         self.__db.execute(
-            "INSERT INTO lottie_gifs (lottie_id, gif_link) VALUES (%s, %s)",
-            (lottie_id, url),
+            "INSERT INTO animated_sticker_gifs (sticker_id, gif_link) VALUES (%s, %s)",
+            (sticker_id, url),
         )
         return
 
-    def remove_lottie(self, lottie_id) -> None:
-        """Removes a lottie url"""
-        self.__db.execute("DELETE FROM lottie_gifs WHERE lottie_id = %s", (lottie_id,))
+    def remove_animated_sticker(self, sticker_id) -> None:
+        """Removes a animated_sticker url"""
+        self.__db.execute("DELETE FROM animated_sticker_gifs WHERE sticker_id = %s", (sticker_id,))
         return
 
     def get_filter(self, guild_id: int) -> Filter | None:
@@ -392,3 +401,22 @@ class Database:
         )
         fetched = self.__db.fetchone()
         return fetched["filter_enabled"]
+
+    def remove_guild_and_data(self, guild_id) -> NoneType:
+        """ Remove a guild based on ID """
+        self.__db.execute(
+            "DELETE FROM configuration WHERE guild_id = %s", (guild_id,)
+        )
+        self.__db.execute(
+            "DELETE FROM filters WHERE guild_id = %s", (guild_id,)
+        )
+        stars = self.get_stars(guild_id, get_star_channel=False)
+        if stars:
+            for star in stars:
+                if star:
+                    self.remove_star(star.star_id)
+            # self.__db.execute(
+            #     "DELETE FROM stars WHERE guild_id = %s", (guild_id,)
+            # )
+            # pass
+        return
