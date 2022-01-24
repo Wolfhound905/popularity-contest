@@ -17,6 +17,8 @@ from dis_snek.models import (
     Scale,
     File,
     listen,
+    MessageTypes,
+    Timestamp
 )
 
 
@@ -26,7 +28,7 @@ import aiohttp
 import aiofiles
 import pyrlottie
 from asyncio.exceptions import TimeoutError
-
+from apnggif import apnggif
 
 class ReactionListener(Scale):
     def __init__(self, bot):
@@ -180,19 +182,49 @@ class ReactionListener(Scale):
                     continue
         elif msg.sticker_items:
             sticker = msg.sticker_items[0]
-            if sticker.format_type in [StickerFormatTypes.PNG, StickerFormatTypes.APNG]:
+            if sticker.format_type == StickerFormatTypes.PNG:
                 base_url = "https://media.discordapp.net/stickers/{}.png?size=240"
                 final_image_links.append(base_url.format(sticker.id))
-
-            elif sticker.format_type == StickerFormatTypes.LOTTIE:
-                link = self.db.get_lottie(sticker.id)
+            
+            elif sticker.format_type == StickerFormatTypes.APNG:
+                link = self.db.get_animated_sticker(sticker.id)
                 async with aiohttp.ClientSession() as session:
                     if link:
                         async with session.head(link) as resp:
                             if resp.status == 200:
                                 final_image_links.append(link)
                             else:
-                                self.db.remove_lottie(sticker.id)
+                                self.db.remove_animated_sticker(sticker.id)
+                                link = None
+                    if link is None:
+                        async with session.get(
+                            f"https://media.discordapp.net/stickers/{sticker.id}.png?size=64&passthrough=true"
+                        ) as resp:
+                            async with aiofiles.open(
+                                f"{sticker.id}.png", mode="wb"
+                            ) as f:
+                                await f.write(await resp.read())
+                                await f.close()
+                            apnggif(f"{sticker.id}.png")
+                            channel = await self.bot.get_channel(915287563009417216)
+                            new_msg = await channel.send(file=File(f"{sticker.id}.gif"))
+                            self.db.insert_animated_sticker(
+                                sticker.id, new_msg.attachments[0].url
+                            )
+                            final_image_links = [new_msg.attachments[0].url]
+                            remove(f"{sticker.id}.png")
+                            remove(f"{sticker.id}.gif")
+                
+
+            elif sticker.format_type == StickerFormatTypes.LOTTIE:
+                link = self.db.get_animated_sticker(sticker.id)
+                async with aiohttp.ClientSession() as session:
+                    if link:
+                        async with session.head(link) as resp:
+                            if resp.status == 200:
+                                final_image_links.append(link)
+                            else:
+                                self.db.remove_animated_sticker(sticker.id)
                                 link = None
                     if link is None:
                         async with session.get(
@@ -215,7 +247,7 @@ class ReactionListener(Scale):
                             )
                             channel = await self.bot.get_channel(915287563009417216)
                             new_msg = await channel.send(file=File(f"{sticker.id}.gif"))
-                            self.db.insert_lottie(
+                            self.db.insert_animated_sticker(
                                 sticker.id, new_msg.attachments[0].url
                             )
                             final_image_links = [new_msg.attachments[0].url]
@@ -253,13 +285,63 @@ class ReactionListener(Scale):
         # embed stuff ----------------
         embeds = []
 
+        match msg.type:
+            case MessageTypes.USER_PREMIUM_GUILD_SUBSCRIPTION:
+                ...
+
+
+        if msg.type == MessageTypes.GUILD_MEMBER_JOIN:
+            welcome_message_template = [
+                "{0} joined the party.",
+                "{0} is here.",
+                "Welcome, {0}. We hope you brought pizza.",
+                "A wild {0} appeared.",
+                "{0} just landed.",
+                "{0} just slid into the server.",
+                "{0} just showed up!",
+                "Welcome {0}. Say hi!",
+                "{0} hopped into the server.",
+                "Everyone welcome {0}!",
+                "Glad you're here, {0}.",
+                "Good to see you, {0}.",
+                "Yay you made it, {0}!",
+            ]
+            created_at = int(msg.timestamp.timestamp() * 1000)
+            
+            description = welcome_message_template[created_at % len(welcome_message_template)].format(msg.author.mention)
+
+        elif msg.content != "":
+            description = msg.content
+        else:
+            description = None
+
+
         base_embed = Embed(
-            description=(msg.content if msg.content != "" else None),
+            description=description,
             url=f"https://top.gg/bot/{self.bot.user.id}/vote",
             color="#FFAC32",
+            timestamp=Timestamp.from_snowflake(msg.id),
         )
         base_embed.set_author(name=msg.author.tag, icon_url=msg.author.avatar.url)
 
+        if msg.embeds:
+            for embed in msg.embeds:
+                print(len(embed))
+            for embed in msg.embeds:
+                embed: Embed
+                if embed.title and embed.description:
+                    print(embed.description)
+                    base_embed.add_field(embed.title, embed.description[0:1024])
+                elif not embed.title and embed.description:
+                    print(embed.description)
+                    base_embed.add_field("\u200b", embed.description[0:1024])
+
+                if embed.image:
+                    final_image_links.append(embed.image.url['url'])
+
+                for feild in embed.fields:
+                    base_embed.add_field(feild.name, feild.value, feild.inline)
+                    
         referenced_msg = await msg.get_referenced_message()
         if referenced_msg:
             referenced_msg = f"| [Replied to..]({referenced_msg.jump_url})"
@@ -270,6 +352,8 @@ class ReactionListener(Scale):
             name="\u200b",
             value=f"[Original Message]({msg.jump_url}) {referenced_msg}",
         )
+
+        base_embed.set_footer("#" + msg.channel.name)
 
         embeds.append(base_embed)
 
