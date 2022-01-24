@@ -63,19 +63,20 @@ class Setup(Scale):
                 )
                 await ctx.send(embeds=[error], ephemeral=True)
                 return
-            try:
-                # bot_member = await self.bot.get_member(self.bot.user.id, ctx.guild.id)
-                # print(await bot_member.channel_permissions(channel))
-                tmp_msg = await channel.send(".")
-                await tmp_msg.delete()
-            except Forbidden:
-                error = Embed(
-                    title="Error",
-                    description="I don't have permission to send messages in this channel",
-                    color="#EB4049",
-                )
-                await ctx.send(embeds=[error])
-                return
+
+            if Permissions.SEND_MESSAGES not in ctx.guild.me.channel_permissions(channel):
+                try:
+                    tmp_msg = await channel.send(".")
+                    await tmp_msg.delete()
+                except Forbidden:
+                    error = Embed(
+                        title="Error",
+                        description="I don't have permission to send messages in this channel",
+                        color="#EB4049",
+                    )
+                    await ctx.send(embeds=[error])
+                    return
+            
 
             self.db.setup(ctx.guild.id, channel.id, min_star_count)
             embed = Embed(
