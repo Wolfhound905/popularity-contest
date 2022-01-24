@@ -1,3 +1,6 @@
 dis-snek @ git+https://github.com/Discord-Snake-Pit/Dis-Snek.git
 pymysql
 python-dotenv
+pyrlottie
+aiofiles
+apnggif
