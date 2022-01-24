@@ -13,6 +13,7 @@ from dis_snek import (
     Permission,
     PermissionTypes,
     slash_option,
+    message_command
 )
 
 
@@ -34,8 +35,7 @@ cls_log.setLevel(logging.DEBUG)
 start_time = time()
 bot = Snake(
     sync_interactions=True,
-    delete_unused_application_cmds=False,
-    default_prefix="⭐",  # never used
+    delete_unused_application_cmds=False,  # never used
     status=Status.DND,
     activity="Star-ting",
 )
@@ -71,22 +71,11 @@ async def help(ctx: InteractionContext):
 #         "Privacy Policy",
 
 
-@slash_command("debug", scopes=[902005056872775760])
-@slash_permission(
-    Permission(324352543612469258, 902005056872775760, PermissionTypes.USER, True)
-)
-@slash_option("channel_id", "Channel ID", opt_type=OptionTypes.STRING, required=True)
-@slash_option("message", "Message ID", opt_type=OptionTypes.STRING, required=True)
-async def debug(ctx: InteractionContext, channel_id, message):
-    channel = await bot.get_channel(int(channel_id))
-    message = await channel.get_message(int(message))
-    await ctx.send(f"{message.embeds}")
-
-
 bot.grow_scale("commands.star_listener")
 bot.grow_scale("commands.setup")
 bot.grow_scale("commands.filter")
 bot.grow_scale("commands.popular")
+bot.grow_scale("commands.manage")
 bot.grow_scale("utils.tasks")
 
 
