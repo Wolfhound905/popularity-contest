@@ -16,14 +16,15 @@ class Tasks(Scale):
         self.bot = bot
 
     @listen()
-    async def on_ready(self):
+    async def on_startup(self):
+        self.ping_db.start()
         self.upload_stats.start()
         self.status_change.start()
-        self.ping_db.start()
+        self.clean_db.start()
+        await self.clean_db()
         await self.status_change()
-        await self.upload_stats()
 
-    @Task.create(IntervalTrigger(seconds=30))
+    @Task.create(IntervalTrigger(minutes=1))
     async def status_change(self):
         await self.bot.change_presence(
             Status.IDLE, get_random_presence(len(self.bot.guilds), self.bot.db)
@@ -48,6 +49,22 @@ class Tasks(Scale):
     @Task.create(IntervalTrigger(seconds=30))
     async def ping_db(self):
         self.bot.db.ping()
+
+    @Task.create(IntervalTrigger(minutes=30))
+    async def clean_db(self):
+        db_guilds = self.bot.db.guilds_with_stars()
+        in_guilds = []
+        for g in self.bot.guilds:
+            try:
+                in_guilds.append(g.id)
+            except:
+                continue
+
+        for guild in db_guilds:
+            if guild not in in_guilds:
+                print(f"Removing guild {guild} from db")
+                self.bot.db.remove_guild_and_data(guild)
+
 
 
 def setup(bot):
