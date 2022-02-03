@@ -99,7 +99,7 @@ class Setup(Scale):
                 channel
             ):
                 try:
-                    tmp_msg = await channel.send(".")
+                    tmp_msg = await channel.send("‌")
                     await tmp_msg.delete()
                 except Forbidden:
                     error = Embed(
