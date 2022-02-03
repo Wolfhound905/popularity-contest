@@ -13,7 +13,10 @@ from dis_snek import (
     GuildPrivateThread,
     GuildPublicThread,
     GuildText,
+    listen,
+    ChannelTypes,
 )
+from dis_snek.api.events.discord import GuildJoin
 
 from utils.database import Database
 
@@ -22,6 +25,23 @@ class Setup(Scale):
     def __init__(self, bot):
         self.bot = bot
         self.db: Database = self.bot.db
+
+    @listen(GuildJoin)
+    async def welcome_message(self, event: GuildJoin):
+        if self.bot.is_ready:
+            guild_in_config = self.db.get_star_channel(event.guild.id)
+            if guild_in_config is None:
+                for channel in event.guild.channels:
+                    if channel.type == ChannelTypes.GUILD_TEXT:
+                        if (
+                            Permissions.SEND_MESSAGES
+                            in event.guild.me.channel_permissions(channel)
+                        ):
+                            print("trying to send message")
+                            await channel.send(
+                                "Thanks for inviting me, get started by running `/setup starboard` :star:"
+                            )
+                            return
 
     @slash_command(
         "setup",
@@ -37,7 +57,18 @@ class Setup(Scale):
         "The minimum amount of stars to star a message Default 3",
         OptionTypes.INTEGER,
     )
-    async def setup(self, ctx: InteractionContext, channel, min_star_count: int = None):
+    @slash_option(
+        "update_on_edit",
+        "When the origin message is edited, update the starboard message (Default False)",
+        OptionTypes.BOOLEAN,
+    )
+    async def setup(
+        self,
+        ctx: InteractionContext,
+        channel,
+        min_star_count: int = None,
+        update_on_edit: bool = False,
+    ):
         if ctx.author.has_permission(Permissions.MANAGE_GUILD):
             if type(channel) not in [GuildPrivateThread, GuildPublicThread, GuildText]:
                 error = Embed(
@@ -64,7 +95,9 @@ class Setup(Scale):
                 await ctx.send(embeds=[error], ephemeral=True)
                 return
 
-            if Permissions.SEND_MESSAGES not in ctx.guild.me.channel_permissions(channel):
+            if Permissions.SEND_MESSAGES not in ctx.guild.me.channel_permissions(
+                channel
+            ):
                 try:
                     tmp_msg = await channel.send(".")
                     await tmp_msg.delete()
@@ -76,9 +109,8 @@ class Setup(Scale):
                     )
                     await ctx.send(embeds=[error])
                     return
-            
 
-            self.db.setup(ctx.guild.id, channel.id, min_star_count)
+            self.db.setup(ctx.guild.id, channel.id, min_star_count, update_on_edit)
             embed = Embed(
                 "⭐ Setup Complete!",
                 f"Posting to {channel.mention} with a minimum star count of {min_star_count}",

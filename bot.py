@@ -13,7 +13,7 @@ from dis_snek import (
     Permission,
     PermissionTypes,
     slash_option,
-    message_command
+    message_command,
 )
 
 
@@ -65,10 +65,28 @@ async def help(ctx: InteractionContext):
     await ctx.send(embeds=[embed])
 
 
-# @slash_command("privacy", "Privacy Policy")
-# async def privacy(ctx: InteractionContext):
-#     embed = Embed(
-#         "Privacy Policy",
+@slash_command("privacy", "Privacy Policy")
+async def privacy(ctx: InteractionContext):
+    embed = Embed(
+        "Privacy Policy",
+        """Your data is important and we take your privacy seriously. This is a simple privacy policy that explains what we do with your data and how we use it. \n
+        When you set up the bot we collect:
+        - Guild ID
+        - Starboard Channel ID
+
+        For stared messages the following is stored:
+        - The message ID
+        - The message Channel ID
+        - The message author ID
+        - The amount of stars
+        - IDs of the users who have starred the message
+        - Starboard post ID
+        
+        We never store message content, only IDs and counts. 
+        All of the code is open source and can be found [here](https://github.com/Wolfhound905/popularity-contest)
+        If you are concerned please DM `Wolfhound905#1234`""",
+    )
+    await ctx.send(embed=embed, ephemeral=True)
 
 
 bot.grow_scale("commands.star_listener")

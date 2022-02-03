@@ -1,9 +1,9 @@
 from dis_snek import (
     Status,
     listen,
-    Task,
 )
 from dis_snek.ext.tasks.triggers import IntervalTrigger
+from dis_snek.ext.tasks.task import Task
 
 from utils.misc import get_random_presence
 from utils.config import topgg_token
@@ -64,7 +64,6 @@ class Tasks(Scale):
             if guild not in in_guilds:
                 print(f"Removing guild {guild} from db")
                 self.bot.db.remove_guild_and_data(guild)
-
 
 
 def setup(bot):

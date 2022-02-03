@@ -12,9 +12,10 @@ from dis_snek import (
     InteractionContext,
     Embed,
     CommandTypes,
-    NotFound,
     Scale,
 )
+
+from dis_snek.client.errors import NotFound
 from utils.database import Database
 from utils.errors import NoResults
 from utils.models import Star
@@ -55,7 +56,6 @@ class Popular(Scale):
                 )
                 return
             star: Star = max(guild_stars, key=lambda x: x.star_count)
-            print(star.author_id)
             try:
                 author = await self.bot.get_member(star.author_id, star.guild_id)
             except NotFound:
@@ -87,8 +87,6 @@ class Popular(Scale):
                     if attachment.content_type.startswith("image"):
                         embed.set_image(url=attachment.url)
 
-            print(embed.to_dict())
-
         elif choice == "person":
             try:
                 stars, total_count = self.db.get_most_popular(ctx.guild.id)
@@ -116,7 +114,6 @@ class Popular(Scale):
     @context_menu("Popularity", CommandTypes.USER)
     async def stats(self, ctx: InteractionContext):
         await ctx.defer(ephemeral=True)
-        print(ctx.target_id)
         target_author = list(ctx.resolved.users.values())[0]
         try:
             stars, total_count = self.db.get_user_stats(ctx.guild.id, target_author.id)

@@ -18,7 +18,7 @@ from dis_snek.models import (
     File,
     listen,
     MessageTypes,
-    Timestamp
+    Timestamp,
 )
 
 
@@ -30,6 +30,7 @@ import pyrlottie
 from asyncio.exceptions import TimeoutError
 from apnggif import apnggif
 
+
 class ReactionListener(Scale):
     def __init__(self, bot):
         self.bot = bot
@@ -37,20 +38,17 @@ class ReactionListener(Scale):
 
     @listen()
     async def on_message_reaction_remove(self, event: MessageReactionRemove):
-        # print("Reaction removed")
         if event.emoji.name not in ["⭐"]:
             return
         min_stars = self.db.min_stars(event.message.guild.id)
         if min_stars is None:
             return
         msg = event.message
-
         index = None
         for x, emoji in enumerate(msg.reactions):
             if emoji.emoji.name == "⭐":
                 index = x
                 break
-
         if index:
             emoji = msg.reactions[index]
 
@@ -92,6 +90,8 @@ class ReactionListener(Scale):
 
     @listen()
     async def on_message_reaction_add(self, event: MessageReactionAdd):
+        if event.author.id == self.bot.user.id:
+            return
         if event.emoji.name not in ["⭐"]:
             return
 
@@ -99,18 +99,16 @@ class ReactionListener(Scale):
         if min_stars is None:
             return
         msg = event.message
-
         for x, emoji in enumerate(msg.reactions):
             if emoji.emoji.name == "⭐":
                 index = x
                 break
-
         emoji = msg.reactions[index]
 
         star = self.db.check_existing(msg.id)
         if star and star.type in [0, 1]:
             """Update star count"""
-            # lprint("Updating star count")
+
             await self.update_star_count("add", event.author.id, star, emoji.count, msg)
 
         elif emoji.count >= min_stars and msg.author.id != self.bot.user.id:
@@ -132,6 +130,7 @@ class ReactionListener(Scale):
                 msg.author.id,
                 emoji.count,
             )
+            await star_id.add_reaction("⭐")
             reactors = []
             for i in range(0, emoji.count, 100):
                 thing = msg.reactions[index].users(
@@ -152,8 +151,7 @@ class ReactionListener(Scale):
                 embeds = await self.embed_maker(event.after)
                 await msg.edit(content=f"⭐ **{star.star_count}**", embeds=embeds)
 
-    async def embed_maker(self, msg) -> List[Embed]:
-        msg: Message
+    async def embed_maker(self, msg: Message) -> List[Embed]:
 
         # Filter Stuff ----------------------
 
@@ -161,12 +159,31 @@ class ReactionListener(Scale):
         msg_filter = self.db.get_filter(msg.guild.id)
         if msg_filter and msg_filter.enabled and msg_filter.filter_words:
             if msg_filter.mode == 0:
-                for word in msg_filter.filter_words:
-                    processed_message.replace(word, f"||{word}||")
+
+                processed_message = processed_message.split()
+                for i, word in enumerate(processed_message):
+                    for filter_word in msg_filter.filter_words:
+                        if re.search(filter_word, word):
+                            processed_message[i] = f"|| {word} ||"
+
+                processed_message = " ".join(processed_message)
             else:
-                for word in msg_filter.filter_words:
-                    if word in processed_message:
-                        processed_message = processed_message.replace(word, "#!@$%^&*")
+                processed_message = processed_message.split()
+                for i, word in enumerate(processed_message):
+                    for filter_word in msg_filter.filter_words:
+                        if re.search(filter_word, word):
+                            processed_message[i] = "#!@$%^&*"[0 : len(word)]
+
+                processed_message = " ".join(processed_message)
+            if processed_message != msg.content:
+                if msg_filter.mode == 0:
+                    processed_message = (
+                        "*Some words hidden due to filter*\n\n" + processed_message
+                    )
+                else:
+                    processed_message = (
+                        "*Some words replaced due to filter*\n\n" + processed_message
+                    )
 
         # ----------------------------------
 
@@ -185,7 +202,7 @@ class ReactionListener(Scale):
             if sticker.format_type == StickerFormatTypes.PNG:
                 base_url = "https://media.discordapp.net/stickers/{}.png?size=240"
                 final_image_links.append(base_url.format(sticker.id))
-            
+
             elif sticker.format_type == StickerFormatTypes.APNG:
                 link = self.db.get_animated_sticker(sticker.id)
                 async with aiohttp.ClientSession() as session:
@@ -214,7 +231,6 @@ class ReactionListener(Scale):
                             final_image_links = [new_msg.attachments[0].url]
                             remove(f"{sticker.id}.png")
                             remove(f"{sticker.id}.gif")
-                
 
             elif sticker.format_type == StickerFormatTypes.LOTTIE:
                 link = self.db.get_animated_sticker(sticker.id)
@@ -285,36 +301,41 @@ class ReactionListener(Scale):
         # embed stuff ----------------
         embeds = []
 
+        description = None
+
         match msg.type:
             case MessageTypes.USER_PREMIUM_GUILD_SUBSCRIPTION:
-                ...
+                description = f"{msg.author.mention} just boosted the server!"
+            case MessageTypes.USER_PREMIUM_GUILD_SUBSCRIPTION_TIER_1:
+                description = f"{msg.author.mention} just boosted the server! {msg.guild.name} has acheived **Level 1!**"
+            case MessageTypes.USER_PREMIUM_GUILD_SUBSCRIPTION_TIER_2:
+                description = f"{msg.author.mention} just boosted the server! {msg.guild.name} has acheived **Level 2!**"
+            case MessageTypes.USER_PREMIUM_GUILD_SUBSCRIPTION_TIER_3:
+                description = f"{msg.author.mention} just boosted the server! {msg.guild.name} has acheived **Level 3!**"
+            case MessageTypes.GUILD_MEMBER_JOIN:
+                welcome_message_template = [
+                    "{0} joined the party.",
+                    "{0} is here.",
+                    "Welcome, {0}. We hope you brought pizza.",
+                    "A wild {0} appeared.",
+                    "{0} just landed.",
+                    "{0} just slid into the server.",
+                    "{0} just showed up!",
+                    "Welcome {0}. Say hi!",
+                    "{0} hopped into the server.",
+                    "Everyone welcome {0}!",
+                    "Glad you're here, {0}.",
+                    "Good to see you, {0}.",
+                    "Yay you made it, {0}!",
+                ]
+                created_at = int(msg.timestamp.timestamp() * 1000)
 
+                description = welcome_message_template[
+                    created_at % len(welcome_message_template)
+                ].format(msg.author.mention)
 
-        if msg.type == MessageTypes.GUILD_MEMBER_JOIN:
-            welcome_message_template = [
-                "{0} joined the party.",
-                "{0} is here.",
-                "Welcome, {0}. We hope you brought pizza.",
-                "A wild {0} appeared.",
-                "{0} just landed.",
-                "{0} just slid into the server.",
-                "{0} just showed up!",
-                "Welcome {0}. Say hi!",
-                "{0} hopped into the server.",
-                "Everyone welcome {0}!",
-                "Glad you're here, {0}.",
-                "Good to see you, {0}.",
-                "Yay you made it, {0}!",
-            ]
-            created_at = int(msg.timestamp.timestamp() * 1000)
-            
-            description = welcome_message_template[created_at % len(welcome_message_template)].format(msg.author.mention)
-
-        elif msg.content != "":
-            description = msg.content
-        else:
-            description = None
-
+        if msg.content != "" and description is None:
+            description = processed_message
 
         base_embed = Embed(
             description=description,
@@ -326,22 +347,27 @@ class ReactionListener(Scale):
 
         if msg.embeds:
             for embed in msg.embeds:
+                print(embed)
                 print(len(embed))
-            for embed in msg.embeds:
-                embed: Embed
-                if embed.title and embed.description:
-                    print(embed.description)
-                    base_embed.add_field(embed.title, embed.description[0:1024])
-                elif not embed.title and embed.description:
-                    print(embed.description)
-                    base_embed.add_field("\u200b", embed.description[0:1024])
+            try:
+                for embed in msg.embeds:
+                    embed: Embed
+                    if embed.title and embed.description:
+                        print(embed.description)
+                        base_embed.add_field(embed.title, embed.description[0:1024])
+                    elif not embed.title and embed.description:
+                        print(embed.description)
+                        base_embed.add_field("\u200b", embed.description[0:1024])
 
-                if embed.image:
-                    final_image_links.append(embed.image.url['url'])
+                    if embed.image:
+                        final_image_links.append(embed.image.url["url"])
 
-                for feild in embed.fields:
-                    base_embed.add_field(feild.name, feild.value, feild.inline)
-                    
+                    for feild in embed.fields:
+                        base_embed.add_field(feild.name, feild.value, feild.inline)
+            except Exception as e:
+                print(e)
+                pass
+
         referenced_msg = await msg.get_referenced_message()
         if referenced_msg:
             referenced_msg = f"| [Replied to..]({referenced_msg.jump_url})"
@@ -382,9 +408,18 @@ class ReactionListener(Scale):
         _type: "add" or "remove"
         """
         reactors = self.db.get_reactors(msg.id, star_type=star.type)
-        # print("New count", new_count)
-        # print("Star Type:", star.type)
-        # print("Reactors", len(reactors))
+        index = None
+        for x, emoji in enumerate(msg.reactions):
+            if emoji.emoji.name == "⭐":
+                index = x
+                break
+        if _type == "add" and star.type == 1:
+            if index is not None:
+                if msg.reactions[index].me:
+                    new_count -= 1
+            while self.bot.user.id in reactors:
+                reactors.remove(self.bot.user.id)
+
         if len(reactors) + 1 == new_count and _type == "add":
             # print(star.type)
             self.db.add_reactor(event_author, star.message_id, star.star_id, star.type)
@@ -401,7 +436,6 @@ class ReactionListener(Scale):
                 return
 
             reactors = []
-            print("This should not happen that much!")
             for i in range(0, new_count, 100):
                 thing = msg.reactions[index].users(
                     after=(reactors[-1] if reactors[-1:] else 0), limit=100

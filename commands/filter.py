@@ -9,7 +9,7 @@ class FilterCommands(Scale):
 
     @slash_command(
         "filter",
-        sub_cmd_name="create",
+        sub_cmd_name="words",
         sub_cmd_description="Filter certain words from going on the starboard.",
     )
     @slash_option(
@@ -69,8 +69,9 @@ class FilterCommands(Scale):
             # print(new_filter)
             embed = Embed(
                 "Filter Complete!",
-                f"The following words will be {'*hidden* on the ' if new_filter.mode == 0 else '*prevented* from being on the'} starboard:\n"
-                + ", ".join([f"`{filter}`" for filter in new_filter.filter_words]),
+                f"The following words will be {'*hidden* on the ' if new_filter.mode == 0 else '*prevented* from being on the'} starboard:||\n"
+                + ", ".join([f"`{filter}`" for filter in new_filter.filter_words])
+                + "\n||",
                 color="#FAD54E",
             )
             embed.set_footer("Work in progress feature.")
@@ -98,7 +99,8 @@ class FilterCommands(Scale):
     )
     async def filter_command_type(self, ctx: InteractionContext, filter_mode: int):
         if ctx.author.has_permission(Permissions.MANAGE_GUILD):
-            if not self.db.get_filter(ctx.guild.id):
+            filter = self.db.get_filter(ctx.guild.id)
+            if not filter:
                 embed = Embed(
                     "Error",
                     "Seems like there is no filter to change. Go create one with `/filter create`",
@@ -172,7 +174,7 @@ class FilterCommands(Scale):
                     "Filter:",
                     f"Status: {'*Enabled*' if filter.enabled else '*Disabled*'}\n"
                     f"Mode: {'*Hidden*' if filter.mode == 0 else '*Prevent*'}\n"
-                    f"Words: ⤦\n{', '.join([f'`{word}`' for word in filter.filter_words])}",
+                    f"Words: ⤦||\n{', '.join([f'`{word}`' for word in filter.filter_words])}\n||",
                 )
 
         else:

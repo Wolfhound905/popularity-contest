@@ -19,18 +19,20 @@ class Database:
         return
 
     def guilds_with_stars(self) -> List[int]:
-        """ Get a list of guild ids """
-        self.__db.execute(
-            "SELECT DISTINCT guild_id FROM stars;"
-        )
-        return [int(x['guild_id']) for x in self.__db.fetchall()]
+        """Get a list of guild ids"""
+        self.__db.execute("SELECT DISTINCT guild_id FROM stars;")
+        return [int(x["guild_id"]) for x in self.__db.fetchall()]
 
-        
-
-    def setup(self, guild_id: int, channel_id: int, star_count: int) -> NoneType:
+    def setup(
+        self,
+        guild_id: int,
+        channel_id: int,
+        star_count: int,
+        update_edited_messages: bool,
+    ) -> NoneType:
         self.__db.execute(
-            "REPLACE INTO configuration (guild_id, star_channel, min_star_count) VALUES (%s, %s, %s);",
-            (guild_id, channel_id, star_count),
+            "REPLACE INTO configuration (guild_id, star_channel, min_star_count, update_edited_messages) VALUES (%s, %s, %s, %s);",
+            (guild_id, channel_id, star_count, update_edited_messages),
         )
         return
 
@@ -57,7 +59,6 @@ class Database:
             "SELECT %s FROM configuration WHERE guild_id = %s;", (column, guild_id)
         )
         fetched = self.__db.fetchone()
-        print(fetched)
         if fetched is None:
             return None
         return fetched[column]
@@ -71,12 +72,16 @@ class Database:
             return None
         return int(fetched["min_star_count"])
 
-    def get_star_channel(self, guild_id: int) -> Union[int, NoneType]:
+    def get_star_channel(self, guild_id: int) -> Union[int, None]:
         """Gets the starboard channel ID"""
         self.__db.execute(
             "SELECT star_channel FROM configuration WHERE guild_id = %s;", (guild_id,)
         )
-        return self.__db.fetchone()["star_channel"]
+        x = self.__db.fetchone()
+        if x is None:
+            return None
+        else:
+            return x["star_channel"]
 
     def check_existing(self, _id: int) -> Union[Star, None]:
         """Checks for existing star in the starboard"""
@@ -192,7 +197,10 @@ class Database:
                 (_id, _id),
             )
         reactors = self.__db.fetchall()
-        return [r["usr_id"] for r in reactors]
+        reactors = [r["usr_id"] for r in reactors]
+        while 900353078128173097 in reactors:
+            reactors.remove(900353078128173097)
+        return reactors
 
     def update_star(self, star_id: int, star_count: int) -> NoneType:
         """Updates the star count"""
@@ -217,7 +225,9 @@ class Database:
         message_total = self.__db.fetchone()["message_total"]
         return message_total, star_total
 
-    def get_stars(self, guild_id: int = None, get_star_channel: bool = True) -> List["Star"]:
+    def get_stars(
+        self, guild_id: int = None, get_star_channel: bool = True
+    ) -> List["Star"]:
         """Gets all the stars for a guild
 
         Returns: list of Star class
@@ -234,6 +244,8 @@ class Database:
             raise NoResults("No stars found")
         if guild_id:
             star_channel = self.get_star_channel(guild_id) if get_star_channel else 0
+            if star_channel is None:
+                star_channel = 0
             return [Star(s, star_channel, s["star_id"]) for s in stars]
         else:
             return [
@@ -275,9 +287,8 @@ class Database:
         fetched = self.__db.fetchall()
         if len(fetched) == 0:
             raise NoResults("No results found.")
-        users_stars = [
-            Star(s, self.get_star_channel(guild_id), s["star_id"]) for s in fetched
-        ]
+        star_channel = self.get_star_channel(guild_id)
+        users_stars = [Star(s, star_channel, s["star_id"]) for s in fetched]
         total_count = sum(s.star_count for s in users_stars)
         return users_stars, total_count
 
@@ -285,7 +296,8 @@ class Database:
     def get_animated_sticker(self, sticker_id) -> str | None:
         """Gets the animated_sticker url"""
         self.__db.execute(
-            "SELECT gif_link FROM animated_sticker_gifs WHERE sticker_id = %s", (sticker_id,)
+            "SELECT gif_link FROM animated_sticker_gifs WHERE sticker_id = %s",
+            (sticker_id,),
         )
         fetched = self.__db.fetchone()
         if fetched is None:
@@ -302,7 +314,9 @@ class Database:
 
     def remove_animated_sticker(self, sticker_id) -> None:
         """Removes a animated_sticker url"""
-        self.__db.execute("DELETE FROM animated_sticker_gifs WHERE sticker_id = %s", (sticker_id,))
+        self.__db.execute(
+            "DELETE FROM animated_sticker_gifs WHERE sticker_id = %s", (sticker_id,)
+        )
         return
 
     def get_filter(self, guild_id: int) -> Filter | None:
@@ -403,13 +417,9 @@ class Database:
         return fetched["filter_enabled"]
 
     def remove_guild_and_data(self, guild_id) -> NoneType:
-        """ Remove a guild based on ID """
-        self.__db.execute(
-            "DELETE FROM configuration WHERE guild_id = %s", (guild_id,)
-        )
-        self.__db.execute(
-            "DELETE FROM filters WHERE guild_id = %s", (guild_id,)
-        )
+        """Remove a guild based on ID"""
+        self.__db.execute("DELETE FROM configuration WHERE guild_id = %s", (guild_id,))
+        self.__db.execute("DELETE FROM filters WHERE guild_id = %s", (guild_id,))
         stars = self.get_stars(guild_id, get_star_channel=False)
         if stars:
             for star in stars:
