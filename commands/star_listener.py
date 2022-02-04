@@ -38,7 +38,7 @@ class ReactionListener(Scale):
 
     @listen()
     async def on_message_reaction_remove(self, event: MessageReactionRemove):
-        if event.emoji.name not in ["⭐"]:
+        if event.emoji.name != "⭐":
             return
         min_stars = self.db.min_stars(event.message.guild.id)
         if min_stars is None:
