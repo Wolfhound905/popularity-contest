@@ -74,7 +74,7 @@ async def privacy(ctx: InteractionContext):
         - Guild ID
         - Starboard Channel ID
 
-        For stared messages the following is stored:
+        For starred messages the following is stored:
         - The message ID
         - The message Channel ID
         - The message author ID
